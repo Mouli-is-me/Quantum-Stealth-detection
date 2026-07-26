@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual Environment
+venv/
+
+# VS Code
+.vscode/
+
+# AI Model
+ai/model.pkl
+
+# Dataset (optional)
+data/sensor_dataset.csv
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment variables
+.env
