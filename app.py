@@ -1,43 +1,77 @@
+import streamlit as st
+
 from simulator.sensor_simulator import (
     generate_environment,
     calculate_sensor_scores
 )
 
 from ai.predict import predict
-
-env = generate_environment()
-
-scores = calculate_sensor_scores(env)
-
-data = {
-    **env,
-    **scores
-}
-
-prediction, confidence = predict(data)
-
 from quantum.optimizer import optimize_sensors
 
-selection = optimize_sensors(scores)
+st.set_page_config(
+    page_title="Quantum Sensor Fusion",
+    layout="wide"
+)
 
-print("\n========== QUANTUM DECISION ==========")
+st.title("🚀 Quantum-Enhanced Multi-Sensor Fusion")
 
-for sensor, enabled in selection.items():
+if st.button("Generate New Scenario"):
 
-    print(sensor, "->", "ON" if enabled else "OFF")
+    env = generate_environment()
 
-print("\n========== ENVIRONMENT ==========")
+    scores = calculate_sensor_scores(env)
 
-for k, v in env.items():
-    print(f"{k:15}: {v}")
+    data = {
+        **env,
+        **scores
+    }
 
-print("\n========== SENSOR SCORES ==========")
+    prediction, confidence = predict(data)
 
-for k, v in scores.items():
-    print(f"{k:15}: {v}")
+    selection = optimize_sensors(scores)
 
-print("\n========== AI RESULT ==========")
+    col1, col2 = st.columns(2)
 
-print("Prediction :", "Target" if prediction else "No Target")
+    with col1:
 
-print("Confidence :", round(confidence * 100, 2), "%")
+        st.subheader("Environment")
+
+        st.write(env)
+
+    with col2:
+
+        st.subheader("Sensor Scores")
+
+        st.progress(scores["Radar"])
+
+        st.write("Radar", scores["Radar"])
+
+        st.progress(scores["Infrared"])
+
+        st.write("Infrared", scores["Infrared"])
+
+        st.progress(scores["Acoustic"])
+
+        st.write("Acoustic", scores["Acoustic"])
+
+    st.divider()
+
+    st.subheader("AI Result")
+
+    if prediction:
+
+        st.success(
+            f"Target Detected ({confidence*100:.2f}%)"
+        )
+
+    else:
+
+        st.error(
+            f"No Target ({confidence*100:.2f}%)"
+        )
+
+    st.divider()
+
+    st.subheader("Quantum Decision")
+
+    st.write(selection)
