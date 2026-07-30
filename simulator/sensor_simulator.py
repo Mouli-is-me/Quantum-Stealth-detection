@@ -172,6 +172,7 @@ def calculate_sensor_scores(
 
     radar_score, radar_meta = calculate_radar_confidence(
         profile, env_config, rcs_m2, stealth, noise_engine
+<<<<<<< HEAD
     )
 
     ir_score, ir_meta = calculate_infrared_confidence(
@@ -261,6 +262,53 @@ if __name__ == "__main__":
     for key, value in sensors.items():
         print(f"{key}: {value}")
 =======
+=======
+    )
+
+    ir_score, ir_meta = calculate_infrared_confidence(
+        profile, env_config, engine_heat, ir_emission, noise_engine
+    )
+
+    thermal_score, thermal_meta = calculate_thermal_confidence(
+        profile, env_config, speed_knots, thermal_delta, engine_heat, noise_engine
+    )
+
+    acoustic_score, acoustic_meta = calculate_acoustic_confidence(
+        profile, env_config, acoustic_spl, noise_factor, noise_engine
+    )
+
+    eo_score, eo_meta = calculate_eo_camera_confidence(
+        profile, env_config, visual_contrast, noise_engine
+    )
+
+    scores_dict = {
+        "Radar": radar_score,
+        "Infrared": ir_score,
+        "Thermal": thermal_score,
+        "Acoustic": acoustic_score,
+        "EO_Camera": eo_score
+    }
+
+    metadata_dict = {
+        "Radar": radar_meta,
+        "Infrared": ir_meta,
+        "Thermal": thermal_meta,
+        "Acoustic": acoustic_meta,
+        "EO_Camera": eo_meta
+    }
+
+    target_info = {
+        "aircraft_type": profile.name,
+        "stealth": stealth,
+        "engine_heat": engine_heat
+    }
+
+    explanations = generate_sensor_explanations(
+        env_config, scores_dict, metadata_dict, target_info
+    )
+
+    return {
+>>>>>>> origin/member2-ai
         "Radar": radar_score,
         "Infrared": ir_score,
         "Acoustic": acoustic_score,
@@ -270,5 +318,9 @@ if __name__ == "__main__":
         "metadata": metadata_dict,
         "sensor_health": {k: v.value for k, v in env_config.sensor_health.items()},
         "ground_truth": env.get("ground_truth", {})
+<<<<<<< HEAD
+    }
+>>>>>>> origin/member2-ai
+=======
     }
 >>>>>>> origin/member2-ai
