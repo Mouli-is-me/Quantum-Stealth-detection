@@ -3,9 +3,6 @@ from quantum.solver import solve_qubo
 
 
 def optimize_sensors(scores):
-    """
-    Main entry point for quantum sensor optimization.
-    """
 
     qp = build_qubo(
         scores["Radar"],
@@ -13,6 +10,6 @@ def optimize_sensors(scores):
         scores["Acoustic"]
     )
 
-    result = solve_qubo(qp)
+    result = solve_qubo(qp, scores)
 
     return result
