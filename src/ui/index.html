@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Sensor Fusion & Stealth Detection Command Center</title>
+    
+    <!-- Google Fonts for Futuristic Sci-Fi HUD Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for military/tech icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Background Canvas for Floating Cyber Particles -->
+    <canvas id="particle-canvas"></canvas>
+    
+    <!-- Scanline overlays for CRT/HUD look -->
+    <div class="hud-scanlines"></div>
+    <div class="hud-grid-overlay"></div>
+
+    <!-- Main Container -->
+    <div class="command-container">
+        
+        <!-- TOP NAVIGATION BAR -->
+        <header class="hud-header">
+            <div class="header-left">
+                <div class="tactical-logo">
+                    <i class="fa-solid fa-atom pulse-magenta"></i>
+                    <span>QUANTUM FUSION SYSTEM</span>
+                    <span class="logo-sub">SEC-LEVEL IV</span>
+                </div>
+            </div>
+            
+            <div class="header-center">
+                <div class="mission-badge animate-pulse-fast">
+                    <span class="pulse-dot"></span>
+                    MISSION ACTIVE
+                </div>
+                <div class="header-system-telemetry">
+                    <span>SYS_SEC: <span class="text-cyan font-mono">GRID_OK</span></span>
+                    <span class="divider">|</span>
+                    <span class="tooltip-container">
+                        CPU: <span id="cpu-telemetry-val" class="text-cyan font-mono">34%</span>
+                        <span class="tooltip-text">Central processing unit workload.</span>
+                    </span>
+                    <span class="divider">|</span>
+                    <span class="tooltip-container">
+                        MEM: <span id="mem-telemetry-val" class="text-blue font-mono">52%</span>
+                        <span class="tooltip-text">System memory usage percentage.</span>
+                    </span>
+                    <span class="divider">|</span>
+                    <span class="tooltip-container">
+                        QPU: <span id="qpu-telemetry-val" class="text-magenta font-mono">78%</span>
+                        <span class="tooltip-text">Quantum Processing Unit workload. Represents active qubit calculations.</span>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="telemetry-info">
+                    <div class="telemetry-item">
+                        <i class="fa-solid fa-wifi text-cyan"></i>
+                        <span>PING: <span id="ping-val" class="text-white">12ms</span></span>
+                    </div>
+                    <div class="telemetry-item">
+                        <i class="fa-solid fa-server text-green"></i>
+                        <span>HEALTH: <span class="text-green">99.8%</span></span>
+                    </div>
+                    <div class="telemetry-item clock">
+                        <i class="fa-regular fa-clock"></i>
+                        <span id="hud-timestamp">16:54:00</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN HUD GRID -->
+        <main class="hud-grid">
+            
+            <!-- LEFT COLUMN: LIVE SENSOR CARDS -->
+            <div class="grid-section col-sensors">
+                <div class="panel-header">
+                    <h2><i class="fa-satellite-dish text-cyan"></i> LIVE MULTI-SPECTRAL SENSORS</h2>
+                    <span class="telemetry-sub">SYS_FEED: ONLINE</span>
+                </div>
+                
+                <div class="sensor-cards-container">
+                    <!-- RADAR -->
+                    <div class="sensor-card" id="card-radar">
+                        <div class="card-glow border-cyan"></div>
+                        <div class="sensor-info">
+                            <div class="sensor-header">
+                                <span class="sensor-title"><i class="fa-radar text-cyan"></i> RADAR (RF)</span>
+                                <span class="sensor-status status-online" id="radar-status">ONLINE</span>
+                            </div>
+                            <div class="sensor-body">
+                                <div class="gauge-wrapper">
+                                    <svg class="circular-gauge" viewBox="0 0 80 80">
+                                        <circle class="bg" cx="40" cy="40" r="34"></circle>
+                                        <circle class="fg stroke-cyan" id="gauge-radar" cx="40" cy="40" r="34" style="stroke-dasharray: 213.6; stroke-dashoffset: 40;"></circle>
+                                    </svg>
+                                    <div class="gauge-value" id="radar-confidence-val">82%</div>
+                                </div>
+                                <div class="sensor-metrics">
+                                    <div class="metric-row">
+                                        <span class="m-label">SIGNAL STRENGTH:</span>
+                                        <span class="m-val text-cyan" id="radar-sig">S3_HIGH</span>
+                                    </div>
+                                    <div class="metric-row">
+                                        <span class="m-label">FREQ BAND:</span>
+                                        <span class="m-val">9.4 GHz</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <canvas class="sensor-waveform" id="radar-wave"></canvas>
+                    </div>
+
+                    <!-- INFRARED -->
+                    <div class="sensor-card" id="card-infrared">
+                        <div class="card-glow border-blue"></div>
+                        <div class="sensor-info">
+                            <div class="sensor-header">
+                                <span class="sensor-title"><i class="fa-eye text-blue"></i> INFRARED (IR)</span>
+                                <span class="sensor-status status-online" id="infrared-status">ONLINE</span>
+                            </div>
+                            <div class="sensor-body">
+                                <div class="gauge-wrapper">
+                                    <svg class="circular-gauge" viewBox="0 0 80 80">
+                                        <circle class="bg" cx="40" cy="40" r="34"></circle>
+                                        <circle class="fg stroke-blue" id="gauge-infrared" cx="40" cy="40" r="34" style="stroke-dasharray: 213.6; stroke-dashoffset: 70;"></circle>
+                                    </svg>
+                                    <div class="gauge-value" id="infrared-confidence-val">68%</div>
+                                </div>
+                                <div class="sensor-metrics">
+                                    <div class="metric-row">
+                                        <span class="m-label">THERMAL NOISE:</span>
+                                        <span class="m-val text-blue" id="infrared-sig">0.18 mK</span>
+                                    </div>
+                                    <div class="metric-row">
+                                        <span class="m-label">WAVELENGTH:</span>
+                                        <span class="m-val">10.6 µm</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <canvas class="sensor-waveform" id="infrared-wave"></canvas>
+                    </div>
+
+                    <!-- THERMAL -->
+                    <div class="sensor-card" id="card-thermal">
+                        <div class="card-glow border-magenta"></div>
+                        <div class="sensor-info">
+                            <div class="sensor-header">
+                                <span class="sensor-title"><i class="fa-fire-flame-curved text-magenta"></i> THERMAL (LWIR)</span>
+                                <span class="sensor-status status-online" id="thermal-status">ONLINE</span>
+                            </div>
+                            <div class="sensor-body">
+                                <div class="gauge-wrapper">
+                                    <svg class="circular-gauge" viewBox="0 0 80 80">
+                                        <circle class="bg" cx="40" cy="40" r="34"></circle>
+                                        <circle class="fg stroke-magenta" id="gauge-thermal" cx="40" cy="40" r="34" style="stroke-dasharray: 213.6; stroke-dashoffset: 35;"></circle>
+                                    </svg>
+                                    <div class="gauge-value" id="thermal-confidence-val">76%</div>
+                                </div>
+                                <div class="sensor-metrics">
+                                    <div class="metric-row">
+                                        <span class="m-label">HEAT SIGNATURE:</span>
+                                        <span class="m-val text-magenta" id="thermal-sig">SIGN_DETECT</span>
+                                    </div>
+                                    <div class="metric-row">
+                                        <span class="m-label">FOV ANGLE:</span>
+                                        <span class="m-val">60° x 45°</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <canvas class="sensor-waveform" id="thermal-wave"></canvas>
+                    </div>
+
+                    <!-- ACOUSTIC -->
+                    <div class="sensor-card" id="card-acoustic">
+                        <div class="card-glow border-amber"></div>
+                        <div class="sensor-info">
+                            <div class="sensor-header">
+                                <span class="sensor-title"><i class="fa-volume-high text-amber"></i> ACOUSTIC (SONAR)</span>
+                                <span class="sensor-status status-online" id="acoustic-status">ONLINE</span>
+                            </div>
+                            <div class="sensor-body">
+                                <div class="gauge-wrapper">
+                                    <svg class="circular-gauge" viewBox="0 0 80 80">
+                                        <circle class="bg" cx="40" cy="40" r="34"></circle>
+                                        <circle class="fg stroke-amber" id="gauge-acoustic" cx="40" cy="40" r="34" style="stroke-dasharray: 213.6; stroke-dashoffset: 120;"></circle>
+                                    </svg>
+                                    <div class="gauge-value" id="acoustic-confidence-val">45%</div>
+                                </div>
+                                <div class="sensor-metrics">
+                                    <div class="metric-row">
+                                        <span class="m-label">AMBIENT NOISE:</span>
+                                        <span class="m-val text-amber" id="acoustic-sig">-45 dB</span>
+                                    </div>
+                                    <div class="metric-row">
+                                        <span class="m-label">SAMPLING RATE:</span>
+                                        <span class="m-val">192 kHz</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <canvas class="sensor-waveform" id="acoustic-wave"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CENTER COLUMN: RADAR MAP & QUANTUM WORKSPACE -->
+            <div class="grid-section col-quantum-center">
+                <div class="center-tabs-header">
+                    <button class="tab-btn active" id="btn-tab-radar"><i class="fa-solid fa-radar"></i> BATTLESPACE RADAR MAP</button>
+                    <button class="tab-btn" id="btn-tab-quantum"><i class="fa-solid fa-circle-nodes"></i> QUANTUM OPTIMIZER NODE</button>
+                </div>
+                
+                <div class="quantum-workspace">
+                    <div class="canvas-container">
+                        <!-- Tab 1: Radar Map Canvas -->
+                        <canvas id="radar-map-canvas" class="tab-content active"></canvas>
+                        
+                        <!-- Tab 2: Quantum Solver Canvas (hidden by default) -->
+                        <canvas id="quantum-canvas" class="tab-content"></canvas>
+                        
+                        <!-- Overlay telemetry details over the canvas directly -->
+                        <div class="canvas-telemetry top-left">
+                            <div class="t-label">SOLVER CONFIG</div>
+                            <div class="tooltip-container">
+                                <div class="t-value">Ising Hamiltonian <i class="fa-solid fa-circle-info tooltip-icon"></i></div>
+                                <span class="tooltip-text">A mathematical formulation representing the physical energy level of qubits. The minimum energy maps to the optimal sensor solution.</span>
+                            </div>
+                            <div class="t-value text-magenta">H = ∑ h_i σ_i + ∑ J_ij σ_i σ_j</div>
+                        </div>
+                        
+                        <div class="canvas-telemetry top-right">
+                            <div class="t-label">BEST VECTOR</div>
+                            <div class="tooltip-container">
+                                <div class="t-value text-green font-mono" id="best-vector-display">1 0 1 1 <i class="fa-solid fa-circle-info tooltip-icon"></i></div>
+                                <span class="tooltip-text">The optimal sensor selection state (1 = Selected, 0 = Ignored) representing: [Radar, IR, Thermal, Sonar].</span>
+                            </div>
+                        </div>
+
+                        <!-- Environmental Overlay - streamlined directly into radar -->
+                        <div class="canvas-telemetry bottom-left env-overlay">
+                            <div class="t-label">BATTLESPACE WEATHER</div>
+                            <div class="env-overlay-row">
+                                <span>WEATHER: <span id="env-weather" class="text-white font-mono">FOGGY</span></span>
+                                <span>VISIBILITY: <span id="env-visibility" class="text-cyan font-mono">1.2 KM</span></span>
+                            </div>
+                            <div class="env-overlay-row">
+                                <span>NOISE: <span id="env-noise" class="text-amber font-mono">72 dB</span></span>
+                                <span>WIND: <span id="env-wind" class="text-white font-mono">14 Kts</span></span>
+                            </div>
+                            <div class="env-overlay-row">
+                                <span>TEMP: <span id="env-temp" class="text-white font-mono">18°C</span></span>
+                                <span>STEALTH: <span id="env-stealth" class="text-magenta font-mono">0.82</span></span>
+                            </div>
+                        </div>
+
+                        <div class="canvas-telemetry bottom-right">
+                            <div class="t-label">ENERGY PROFILE</div>
+                            <div class="t-value text-cyan font-mono" id="qubo-energy">-2.845</div>
+                            <div class="t-label">ITERATION</div>
+                            <div class="t-value font-mono" id="qubo-iteration">1,024</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- horizontal processing flow -->
+                <div class="pipeline-section">
+                    <div class="pipeline-flow">
+                        <div class="pipeline-node active" id="pipe-input">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Sensor Input</span>
+                        </div>
+                        <div class="pipeline-arrow"><i class="fa-solid fa-angle-right"></i></div>
+                        <div class="pipeline-node" id="pipe-sync">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            <span>Sync</span>
+                        </div>
+                        <div class="pipeline-arrow"><i class="fa-solid fa-angle-right"></i></div>
+                        <div class="pipeline-node" id="pipe-features">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>Features</span>
+                        </div>
+                        <div class="pipeline-arrow"><i class="fa-solid fa-angle-right"></i></div>
+                        <div class="pipeline-node" id="pipe-ai">
+                            <i class="fa-solid fa-brain"></i>
+                            <span>AI Estimator</span>
+                        </div>
+                        <div class="pipeline-arrow"><i class="fa-solid fa-angle-right"></i></div>
+                        <div class="pipeline-node" id="pipe-quantum">
+                            <i class="fa-solid fa-circle-nodes"></i>
+                            <span class="tooltip-container">
+                                QUBO Solver <i class="fa-solid fa-circle-info tooltip-icon"></i>
+                                <span class="tooltip-text">Quadratic Unconstrained Binary Optimization. Selects optimal sensors that maximize data quality and minimize duplicate noise.</span>
+                            </span>
+                        </div>
+                        <div class="pipeline-arrow"><i class="fa-solid fa-angle-right"></i></div>
+                        <div class="pipeline-node" id="pipe-threat">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>Threat Class</span>
+                        </div>
+                        <div class="pipeline-arrow"><i class="fa-solid fa-angle-right"></i></div>
+                        <div class="pipeline-node" id="pipe-decision">
+                            <i class="fa-solid fa-crosshairs"></i>
+                            <span>Tactical Action</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: THREAT BRIEFING, LOGS & CHARTS -->
+            <div class="grid-section col-threat">
+                
+                <!-- THREAT CARD -->
+                <div class="threat-panel">
+                    <div class="threat-summary-card">
+                        <div class="threat-gauge-container">
+                            <svg class="threat-gauge" viewBox="0 0 100 100">
+                                <circle class="bg" cx="50" cy="50" r="42"></circle>
+                                <circle class="fg stroke-red" id="threat-confidence-gauge" cx="50" cy="50" r="42" style="stroke-dasharray: 263.89; stroke-dashoffset: 21;"></circle>
+                            </svg>
+                            <div class="threat-percentage" id="threat-confidence-val">92%</div>
+                            <div class="threat-label">CONFIDENCE</div>
+                        </div>
+                        
+                        <div class="threat-details">
+                            <div class="detail-item">
+                                <span class="label">THREAT LEVEL</span>
+                                <span class="value text-red animate-pulse-fast" id="threat-level">CRITICAL</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">ACTION RECOMMENDED</span>
+                                <span class="action-badge bg-red" id="recommended-action">INTERCEPT</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DYNAMIC JUDGE BRIEFING & COMPARISON PANEL -->
+                <div class="briefing-panel">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-newspaper text-magenta"></i> JUDGE'S TACTICAL BRIEFING</h2>
+                    </div>
+                    <div class="briefing-content">
+                        <!-- Plain English summary -->
+                        <div class="briefing-text" id="judge-briefing-text">
+                            Awaiting sensor sweep sync cycle...
+                        </div>
+                        
+                        <!-- Visual comparison bar meters -->
+                        <div class="comparison-visuals">
+                            <div class="comp-metric-header">QUANTUM ADVANTAGE BENCHMARKS</div>
+                            
+                            <div class="bar-metric-row">
+                                <span class="bar-label">Inference Accuracy:</span>
+                                <div class="bar-comparison-container">
+                                    <div class="bar-segment">
+                                        <span class="bar-title">Classical</span>
+                                        <div class="progress-bar-bg"><div id="bar-classic-acc" class="progress-bar-fill bg-amber" style="width: 74%;"></div></div>
+                                        <span class="bar-val font-mono" id="val-classic-acc">74.5%</span>
+                                    </div>
+                                    <div class="bar-segment">
+                                        <span class="bar-title text-green">Quantum</span>
+                                        <div class="progress-bar-bg"><div id="bar-quantum-acc" class="progress-bar-fill bg-green" style="width: 92%;"></div></div>
+                                        <span class="bar-val font-mono text-green" id="val-quantum-acc">92.0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bar-metric-row">
+                                <span class="bar-label">False Alarm Rate:</span>
+                                <div class="bar-comparison-container">
+                                    <div class="bar-segment">
+                                        <span class="bar-title">Classical</span>
+                                        <div class="progress-bar-bg"><div id="bar-classic-alarm" class="progress-bar-fill bg-amber" style="width: 12%;"></div></div>
+                                        <span class="bar-val font-mono" id="val-classic-alarm">12.4%</span>
+                                    </div>
+                                    <div class="bar-segment">
+                                        <span class="bar-title text-green">Quantum</span>
+                                        <div class="progress-bar-bg"><div id="bar-quantum-alarm" class="progress-bar-fill bg-green" style="width: 2%;"></div></div>
+                                        <span class="bar-val font-mono text-green" id="val-quantum-alarm">2.1%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bar-metric-row">
+                                <span class="bar-label">Fusion Processing Speed:</span>
+                                <div class="bar-comparison-container">
+                                    <div class="bar-segment">
+                                        <span class="bar-title">Classical</span>
+                                        <div class="progress-bar-bg"><div id="bar-classic-lat" class="progress-bar-fill bg-amber" style="width: 95%;"></div></div>
+                                        <span class="bar-val font-mono" id="val-classic-lat">45.0ms</span>
+                                    </div>
+                                    <div class="bar-segment">
+                                        <span class="bar-title text-green">Quantum</span>
+                                        <div class="progress-bar-bg"><div id="bar-quantum-lat" class="progress-bar-fill bg-green" style="width: 2%;"></div></div>
+                                        <span class="bar-val font-mono text-green" id="val-quantum-lat">0.8ms</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="quantum-delta-callout">
+                                <i class="fa-solid fa-circle-up text-green animate-pulse-fast"></i>
+                                <span>Quantum selects the ultimate sensor set in real-time, delivering <span class="text-green font-mono" id="quantum-delta-percentage">+17.5%</span> better accuracy.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STREAMLINED CHARTS (Unified History & Weight) -->
+                <div class="charts-panel">
+                    <div class="charts-switcher-container">
+                        <div class="chart-wrapper-streamlined">
+                            <span class="chart-title">Detection Confidence History</span>
+                            <canvas id="lineChart"></canvas>
+                        </div>
+                        <div class="chart-wrapper-streamlined">
+                            <span class="chart-title">Sensor Weight (Quantum vs Classical)</span>
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MISSION STATUS FEED & ACTIVITY LOG -->
+                <div class="log-panel-streamlined">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-list-check text-cyan"></i> BATTLESPACE EVENT LOG</h2>
+                        <span class="telemetry-sub font-mono"><span class="pulse-dot"></span> LIVE</span>
+                    </div>
+                    <div class="log-terminal" id="log-terminal-feed">
+                        <!-- Log entries filled by JS -->
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+
+        <!-- FOOTER & TECH TAGS -->
+        <footer class="hud-footer">
+            <div class="footer-left">
+                <span>MILITARY TECH LAB // COVERT STRATEGIC AI COMMAND DEPLOYMENT</span>
+            </div>
+            <div class="footer-center">
+                <div class="tech-tags">
+                    <span class="tech-tag">Qiskit</span>
+                    <span class="tech-tag">Quantum QUBO</span>
+                    <span class="tech-tag">Python Flask</span>
+                    <span class="tech-tag">Chart.js</span>
+                    <span class="tech-tag">Scikit-Learn</span>
+                    <span class="tech-tag">Hybrid AI</span>
+                </div>
+            </div>
+            <div class="footer-right">
+                <span>SYSTEM VERSION 2.8.4-BETA</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Chart.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <!-- Core Application Javascript -->
+    <script src="js/app.js"></script>
+</body>
+</html>

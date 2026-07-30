@@ -22,44 +22,45 @@ st.title("🚀 Quantum-Enhanced Multi-Sensor Fusion")
 
 if st.button("Generate New Scenario"):
 
-    # --------------------------------------------------
-    # Generate Environment
-    # --------------------------------------------------
+    import time
+    with st.status("Analyzing Battlefield Scenario...", expanded=True) as status:
+        st.write("🌍 Generating environment factors...")
+        time.sleep(0.5)
+        environment = generate_environment()
 
-    environment = generate_environment()
+        st.write("📡 Calculating multi-sensor confidence scores...")
+        time.sleep(0.5)
+        scores = calculate_sensor_scores(environment)
 
-    # --------------------------------------------------
-    # Calculate Sensor Scores
-    # --------------------------------------------------
+        sensor_data = {
+            **environment,
+            **scores
+        }
 
-    scores = calculate_sensor_scores(environment)
+        st.write("🤖 Running classical AI prediction model...")
+        time.sleep(0.5)
+        prediction, confidence = predict(sensor_data)
 
-    # --------------------------------------------------
-    # Merge data for AI model
-    # --------------------------------------------------
+        st.write("⚡ Running Quantum Optimization & Classical Baseline in parallel...")
+        time.sleep(0.5)
+        
+        import concurrent.futures
+        import time
+        
+        start_parallel = time.time()
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            # Submit both tasks to run concurrently
+            future_quantum = executor.submit(optimize_sensors, scores)
+            future_classical = executor.submit(classical_sensor_fusion, scores)
+            
+            # Wait for both to finish and retrieve results
+            quantum = future_quantum.result()
+            classical = future_classical.result()
+            
+        parallel_duration = time.time() - start_parallel
 
-    sensor_data = {
-        **environment,
-        **scores
-    }
-
-    # --------------------------------------------------
-    # AI Prediction
-    # --------------------------------------------------
-
-    prediction, confidence = predict(sensor_data)
-
-    # --------------------------------------------------
-    # Quantum Optimization
-    # --------------------------------------------------
-
-    quantum = optimize_sensors(scores)
-
-    # --------------------------------------------------
-    # Classical Baseline
-    # --------------------------------------------------
-
-    classical = classical_sensor_fusion(scores)
+        status.update(label=f"Analysis Complete! (Parallel execution took {parallel_duration:.3f}s)", state="complete", expanded=False)
 
     # --------------------------------------------------
     # Environment + Sensor Scores
@@ -104,6 +105,19 @@ if st.button("Generate New Scenario"):
         st.error(
             f"❌ No Target ({confidence * 100:.2f}%)"
         )
+
+    st.divider()
+
+    # --------------------------------------------------
+    # Parallel Execution Performance
+    # --------------------------------------------------
+
+    st.subheader("⚡ Parallel Execution Performance")
+    
+    st.info(
+        f"**Concurrency achieved:** The Quantum Optimization Engine and Classical Baseline Fusion model were executed concurrently in separate threads. "
+        f"Total parallel execution time: **{parallel_duration:.3f} seconds**."
+    )
 
     st.divider()
 
@@ -166,6 +180,8 @@ if st.button("Generate New Scenario"):
     # --------------------------------------------------
 
     st.subheader("🛰️ Quantum Sensor Selection")
+
+    st.info(quantum["reason"])
 
     for sensor, enabled in quantum["selection"].items():
 

@@ -39,10 +39,31 @@ def calculate_sensor_scores(env):
         * env["noise"]
     )
 
+    lidar = (
+        distance_factor
+        * (1 - env["stealth"])
+        * (0.5 if env["weather"] in ["Rain", "Fog"] else 1.0)
+    )
+
+    thermal = (
+        distance_factor
+        * env["engine_heat"]
+        * 0.9  # Thermal is relatively weather resistant
+    )
+
+    sonar = (
+        distance_factor
+        * env["noise"]
+        * (0.8 if env["weather"] == "Rain" else 1.0) # Rain affects sonar slightly
+    )
+
     return {
         "Radar": round(min(radar, 1), 2),
         "Infrared": round(min(infrared, 1), 2),
-        "Acoustic": round(min(acoustic, 1), 2)
+        "Acoustic": round(min(acoustic, 1), 2),
+        "Lidar": round(min(lidar, 1), 2),
+        "Thermal": round(min(thermal, 1), 2),
+        "Sonar": round(min(sonar, 1), 2)
     }
 
 
