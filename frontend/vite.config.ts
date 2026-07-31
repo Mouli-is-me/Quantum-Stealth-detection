@@ -3,16 +3,21 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
+  base: '/Quantum-Stealth-detection/', // <-- Add this line
+
   plugins: [react()],
+
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
+
   build: {
     outDir: '../src/ui',
     emptyOutDir: true,
   },
+
   server: {
     port: 3000,
     proxy: {
