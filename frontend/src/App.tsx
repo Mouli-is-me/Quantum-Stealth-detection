@@ -566,14 +566,6 @@ export const App: React.FC = () => {
     return () => cancelAnimationFrame(animId);
   }, [stage, data]);
 
-  // Statistics calculations
-  const totalDetections = history.length;
-  const stealthCount = history.filter(h => h.targetType.includes('Stealth')).length;
-  const falseAlarmsCount = history.filter(h => h.targetCategory === 'Wildlife' || h.targetCategory === 'Unknown').length;
-  const averageConfidence = totalDetections > 0
-    ? Math.round(history.reduce((acc, curr) => acc + curr.overallConfidence, 0) / totalDetections)
-    : 0;
-
   // Filter history records based on search and selected settings
   const filteredHistory = history.filter(record => {
     // Search query
@@ -603,6 +595,24 @@ export const App: React.FC = () => {
 
     return true;
   });
+
+  // Statistics calculations dynamically derived from filteredHistory
+  const totalDetections = filteredHistory.length;
+
+  const stealthCount = filteredHistory.filter(h => 
+    h.targetType.toLowerCase().includes('stealth') || 
+    h.targetCategory.toLowerCase().includes('stealth')
+  ).length;
+
+  const falseAlarmsCount = filteredHistory.filter(h => {
+    const typeLower = h.targetType.toLowerCase();
+    const isFalseWord = ['bird', 'whale', 'dolphin', 'clutter', 'echo', 'noise', 'reflection', 'glitch', 'debris', 'wave', 'balloon'].some(kw => typeLower.includes(kw));
+    return isFalseWord || h.finalDecision === 'IGNORE' || h.finalDecision === 'FALSE_ALARM' || h.targetCategory === 'Wildlife';
+  }).length;
+
+  const averageConfidence = totalDetections > 0
+    ? Math.round(filteredHistory.reduce((acc, curr) => acc + curr.overallConfidence, 0) / totalDetections)
+    : 0;
 
   // Threat Color Coding resolution helper
   const getThreatColor = (category: string, level: string) => {
