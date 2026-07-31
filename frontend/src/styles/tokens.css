@@ -1,0 +1,29 @@
+:root {
+  --bg-base: #0A0D0A;          /* almost-black background */
+  --panel-bg: #141815;         /* dark graphite panels */
+  --panel-border: #2A322C;
+  --text-primary: #D8E0D8;
+  --text-secondary: #8A968A;
+  --color-primary: #3F6B3F;    /* military green */
+  --color-primary-bright: #5FA85F;
+  --color-secondary: #35B8C4;  /* radar cyan */
+  --color-warning: #D99A2B;    /* amber */
+  --color-critical: #C6362F;   /* red */
+  --color-offline: #4A4A4A;
+}
+
+/* Custom scrollbars for military dense UI */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+  border-radius: 0px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-bright);
+}

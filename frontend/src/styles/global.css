@@ -1,0 +1,58 @@
+@import './tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}
+
+/* Tactical HUD scanline effect overlay */
+.scanline-overlay {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+/* Subtle CRT gridlines */
+.grid-overlay {
+  background-size: 20px 20px;
+  background-image: 
+    linear-gradient(to right, rgba(42, 50, 44, 0.2) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(42, 50, 44, 0.2) 1px, transparent 1px);
+}
+
+/* Sharp inset borders */
+.c2-card {
+  background-color: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+}
+
+.c2-card-glow {
+  border-color: var(--color-primary-bright);
+  box-shadow: inset 0 0 10px rgba(95, 168, 95, 0.15), 0 0 10px rgba(95, 168, 95, 0.1);
+}
+
+/* Glowing text utilities */
+.text-glow-green {
+  text-shadow: 0 0 8px rgba(95, 168, 95, 0.6);
+}
+.text-glow-cyan {
+  text-shadow: 0 0 8px rgba(53, 184, 196, 0.6);
+}
+.text-glow-amber {
+  text-shadow: 0 0 8px rgba(217, 154, 43, 0.6);
+}
+.text-glow-red {
+  text-shadow: 0 0 8px rgba(198, 54, 47, 0.6);
+}
