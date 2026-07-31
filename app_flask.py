@@ -10,7 +10,7 @@ from ai.predict import predict
 from quantum.optimizer import optimize_sensors
 from quantum.classical_baseline import classical_sensor_fusion
 
-app = Flask(__name__, static_folder='src/ui')
+app = Flask(__name__, static_folder='docs')
 
 @app.route('/')
 def index():

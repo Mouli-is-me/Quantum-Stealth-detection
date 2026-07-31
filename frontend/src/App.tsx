@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Cpu, Activity, Zap, ShieldAlert, CheckCircle, Navigation, Radio, Terminal, History, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Shield, Cpu, Activity, Zap, ShieldAlert, CheckCircle, Navigation, Radio, Terminal, History, Search, ChevronDown, ChevronUp, Eye, Filter } from 'lucide-react';
 
 interface SensorReading {
   name: string;
@@ -9,26 +9,28 @@ interface SensorReading {
 
 interface DemoData {
   weather: string;
-  visibility: number;
-  noise: number;
-  wind: number;
-  temp: number;
+  visibility: string;
+  noise: string;
+  seaState: string;
   stealth: number;
   rawSensors: SensorReading[];
   aiConfidences: Record<string, number>;
   quantumWeights: Record<string, number>;
   fusedConfidence: number;
-  threatLevel: string;
+  threatLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'UNKNOWN';
   classification: string;
   recommendedAction: string;
+  explainability: string;
+  targetCategory: string;
 }
 
 interface HistoryRecord {
   id: string;
   timestamp: string;
-  targetType: 'Stealth Submarine' | 'Normal Submarine' | 'No Target';
+  targetCategory: string;
+  targetType: string;
   overallConfidence: number;
-  threatLevel: string;
+  threatLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'UNKNOWN';
   radarConfidence: number;
   infraredConfidence: number;
   acousticConfidence: number;
@@ -37,8 +39,245 @@ interface HistoryRecord {
   finalDecision: string;
   rawSensors: SensorReading[];
   weather: string;
-  visibility: number;
-  noise: number;
+  visibility: string;
+  noise: string;
+  seaState: string;
+  explainability: string;
+}
+
+// Lists of target types by category
+const TARGET_CATEGORIES = {
+  Naval: ['Stealth Submarine', 'Conventional Submarine', 'Destroyer', 'Frigate', 'Aircraft Carrier', 'Patrol Boat', 'Missile Boat', 'Cargo Ship', 'Fishing Vessel', 'Amphibious Assault Ship'],
+  Air: ['Stealth Fighter', 'Fighter Jet', 'Bomber', 'Recon Aircraft', 'Transport Aircraft', 'UAV', 'Recon Drone', 'Attack Drone', 'Helicopter', 'UAV Swarm'],
+  Ground: ['Main Battle Tank', 'Armored Vehicle', 'Missile Launcher', 'Mobile Radar', 'Military Convoy', 'Air Defense System'],
+  Civilian: ['Passenger Aircraft', 'Cargo Plane', 'Cargo Ship', 'Civilian Helicopter', 'Sailboat'],
+  Wildlife: ['Bird', 'Bird Flock', 'Whale', 'Dolphin', 'Floating Debris', 'Sea Waves', 'Weather Balloon', 'Rain Reflection', 'Cloud Reflection'],
+  Unknown: ['Unknown Contact', 'Unknown Vessel', 'Unknown Aircraft', 'Unknown Radar Echo']
+};
+
+const WEATHER_OPTIONS = ['Clear', 'Cloudy', 'Rain', 'Fog', 'Storm', 'Snow', 'Night'];
+const VISIBILITY_OPTIONS = ['300 m', '700 m', '1 km', '3 km', '6 km', '10 km'];
+const NOISE_OPTIONS = ['Very Low', 'Low', 'Medium', 'High', 'Extreme'];
+const SEA_STATE_OPTIONS = ['Calm', 'Moderate', 'Rough', 'High Waves'];
+
+/**
+ * Procedurally generates a unique detection scenario based on target type & environment
+ */
+function generateProceduralDetection(seedIndex: number, specificTimestamp?: string): HistoryRecord {
+  const categoryKeys = Object.keys(TARGET_CATEGORIES) as Array<keyof typeof TARGET_CATEGORIES>;
+  
+  // Weighted category selection: Naval (30%), Air (30%), Ground (15%), Civilian (10%), Wildlife (10%), Unknown (5%)
+  const randVal = Math.random();
+  let category: keyof typeof TARGET_CATEGORIES = 'Naval';
+  if (randVal < 0.3) category = 'Naval';
+  else if (randVal < 0.6) category = 'Air';
+  else if (randVal < 0.75) category = 'Ground';
+  else if (randVal < 0.85) category = 'Civilian';
+  else if (randVal < 0.95) category = 'Wildlife';
+  else category = 'Unknown';
+
+  const types = TARGET_CATEGORIES[category];
+  const targetType = types[Math.floor(Math.random() * types.length)];
+
+  // Randomized environment conditions
+  const weather = WEATHER_OPTIONS[Math.floor(Math.random() * WEATHER_OPTIONS.length)];
+  const visibility = VISIBILITY_OPTIONS[Math.floor(Math.random() * VISIBILITY_OPTIONS.length)];
+  const noise = NOISE_OPTIONS[Math.floor(Math.random() * NOISE_OPTIONS.length)];
+  const seaState = SEA_STATE_OPTIONS[Math.floor(Math.random() * SEA_STATE_OPTIONS.length)];
+
+  // Deduce Threat Level
+  let threatLevel: HistoryRecord['threatLevel'] = 'MEDIUM';
+  if (category === 'Wildlife') {
+    threatLevel = 'LOW';
+  } else if (category === 'Unknown') {
+    threatLevel = 'UNKNOWN';
+  } else if (category === 'Civilian') {
+    threatLevel = 'LOW';
+  } else {
+    // Military targets
+    if (targetType.includes('Stealth') || targetType.includes('Carrier') || targetType.includes('Swarm') || targetType.includes('Defense')) {
+      threatLevel = 'CRITICAL';
+    } else if (targetType.includes('Fighter') || targetType.includes('Bomber') || targetType.includes('Launcher') || targetType.includes('Destroyer')) {
+      threatLevel = 'HIGH';
+    } else {
+      threatLevel = 'MEDIUM';
+    }
+  }
+
+  // Base raw sensor calculations dependent on target type properties
+  let baseRadar = 50;
+  let baseIR = 50;
+  let baseAcoustic = 50;
+  let baseMagnetic = 30;
+
+  if (targetType.includes('Stealth')) {
+    baseRadar = 15;
+    baseIR = 25;
+    baseAcoustic = 35;
+    baseMagnetic = 40;
+  } else if (category === 'Air') {
+    baseRadar = 80;
+    baseIR = 75;
+    baseAcoustic = 40;
+    baseMagnetic = 15;
+  } else if (category === 'Naval') {
+    baseRadar = 35;
+    baseIR = 30;
+    baseAcoustic = 85;
+    baseMagnetic = 60;
+  } else if (category === 'Ground') {
+    baseRadar = 70;
+    baseIR = 80;
+    baseAcoustic = 55;
+    baseMagnetic = 50;
+  } else if (category === 'Wildlife') {
+    baseRadar = 10;
+    baseIR = 15;
+    baseAcoustic = 20;
+    baseMagnetic = 5;
+  }
+
+  // Atmospheric interference penalty offsets
+  if (weather === 'Storm' || weather === 'Rain') {
+    baseRadar = Math.max(5, baseRadar - 20);
+    baseIR = Math.max(5, baseIR - 15);
+  }
+  if (weather === 'Fog') {
+    baseIR = Math.max(5, baseIR - 35);
+  }
+  if (noise === 'Extreme' || noise === 'High') {
+    baseAcoustic = Math.max(5, baseAcoustic - 25);
+  }
+
+  const rawSensors: SensorReading[] = [
+    { name: 'Radar', value: Math.round(baseRadar + Math.random() * 10), noise: Math.round(10 + Math.random() * 8) },
+    { name: 'Infrared', value: Math.round(baseIR + Math.random() * 10), noise: Math.round(8 + Math.random() * 8) },
+    { name: 'Acoustic', value: Math.round(baseAcoustic + Math.random() * 10), noise: Math.round(12 + Math.random() * 10) },
+    { name: 'Magnetic', value: Math.round(baseMagnetic + Math.random() * 10), noise: Math.round(5 + Math.random() * 5) },
+  ];
+
+  // AI Confidences follow raw readings but introduce machine learning variance
+  const radarConfidence = Math.round(rawSensors[0].value * 0.9 + Math.random() * 5);
+  const infraredConfidence = Math.round(rawSensors[1].value * 0.88 + Math.random() * 5);
+  const acousticConfidence = Math.round(rawSensors[2].value * 0.92 + Math.random() * 5);
+  const magneticConfidence = Math.round(rawSensors[3].value * 0.85 + Math.random() * 5);
+
+  // Quantum Optimization Weight calculations - adjust weights based on targets and conditions
+  let qRadar = 25;
+  let qInfrared = 25;
+  let qAcoustic = 25;
+  let qMagnetic = 25;
+
+  if (targetType.includes('Stealth Submarine')) {
+    qAcoustic = 85;
+    qMagnetic = 75;
+    qRadar = 15;
+    qInfrared = 10;
+  } else if (targetType.includes('Stealth Fighter')) {
+    qRadar = 65;
+    qInfrared = 80;
+    qAcoustic = 10;
+    qMagnetic = 15;
+  } else if (category === 'Naval') {
+    qAcoustic = 75;
+    qMagnetic = 55;
+    qRadar = 45;
+  } else if (category === 'Air') {
+    qRadar = 80;
+    qInfrared = 70;
+    qAcoustic = 15;
+  } else if (category === 'Wildlife') {
+    qAcoustic = 60;
+    qRadar = 15;
+  }
+
+  // Climate weight adjustments
+  if (weather === 'Fog') {
+    qInfrared = Math.max(5, qInfrared - 40);
+  }
+  if (noise === 'Extreme') {
+    qAcoustic = Math.max(5, qAcoustic - 30);
+  }
+
+  // Normalize quantum weights to add up to 100%
+  const qSum = qRadar + qInfrared + qAcoustic + qMagnetic;
+  const quantumWeights = {
+    Radar: Math.round((qRadar / qSum) * 100),
+    Infrared: Math.round((qInfrared / qSum) * 100),
+    Acoustic: Math.round((qAcoustic / qSum) * 100),
+    Magnetic: Math.round((qMagnetic / qSum) * 100),
+  };
+
+  // Sensor Fusion calculation (fused confidence score)
+  const fusedScoreNumerator =
+    (radarConfidence * quantumWeights.Radar) +
+    (infraredConfidence * quantumWeights.Infrared) +
+    (acousticConfidence * quantumWeights.Acoustic) +
+    (magneticConfidence * quantumWeights.Magnetic);
+  const fusedConfidence = Math.round(fusedScoreNumerator / 100);
+
+  // AI Decision logic
+  let finalDecision = 'MONITOR';
+  if (threatLevel === 'LOW') {
+    finalDecision = 'IGNORE';
+  } else if (threatLevel === 'UNKNOWN') {
+    finalDecision = 'VERIFY';
+  } else if (category === 'Civilian') {
+    finalDecision = fusedConfidence > 60 ? 'ESCORT' : 'MONITOR';
+  } else {
+    if (fusedConfidence > 80) {
+      finalDecision = threatLevel === 'CRITICAL' ? 'ENGAGE' : 'INTERCEPT';
+    } else if (fusedConfidence > 55) {
+      finalDecision = 'TRACK';
+    } else {
+      finalDecision = 'CLASSIFY';
+    }
+  }
+
+  // Unique explanation synthesis
+  let explainability = `Classification locked on target type [${targetType}]. `;
+  if (targetType.includes('Stealth')) {
+    explainability += `Active radar/IR cross section returns were low; quantum QUBO solver prioritized Acoustic (${quantumWeights.Acoustic}%) and Magnetic (${quantumWeights.Magnetic}%) channels to bypass stealth signatures. `;
+  } else if (category === 'Air') {
+    explainability += `High radar reflectivity and thermal anomalies identified target tracking data. `;
+  } else {
+    explainability += `Optimal sensor weight fusion completed. `;
+  }
+
+  if (weather === 'Fog' || weather === 'Storm') {
+    explainability += `Environmental noise (${noise}) and weather constraints (${weather}) successfully mitigated via quantum adaptive weight scaling.`;
+  }
+
+  const id = `DET-${Math.floor(1000 + Math.random() * 9000)}-${seedIndex}`;
+
+  let timestamp = specificTimestamp;
+  if (!timestamp) {
+    // Generate timestamps backward covering several hours of surveillance
+    const dateObj = new Date();
+    dateObj.setMinutes(dateObj.getMinutes() - seedIndex * 14 - Math.floor(Math.random() * 5));
+    timestamp = dateObj.toTimeString().split(' ')[0];
+  }
+
+  return {
+    id,
+    timestamp,
+    targetCategory: category,
+    targetType,
+    overallConfidence: fusedConfidence,
+    threatLevel,
+    radarConfidence,
+    infraredConfidence,
+    acousticConfidence,
+    magneticConfidence,
+    quantumWeights,
+    finalDecision,
+    rawSensors,
+    weather,
+    visibility,
+    noise,
+    seaState,
+    explainability,
+  };
 }
 
 export const App: React.FC = () => {
@@ -49,91 +288,87 @@ export const App: React.FC = () => {
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'stealth' | 'normal' | 'none'>('all');
   const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
+
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterThreat, setFilterThreat] = useState<string>('all');
+  const [filterDecision, setFilterDecision] = useState<string>('all');
+  const [minConfidence, setMinConfidence] = useState<number>(0);
+  const [timeFilter, setTimeFilter] = useState<string>('all'); // all, 1h, 3h
+
   const radarCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Fetch scenario data once per loop cycle
+  // Pre-populate with 15 unique, historical procedural records
+  useEffect(() => {
+    const historicalRecords: HistoryRecord[] = [];
+    for (let i = 1; i <= 15; i++) {
+      historicalRecords.push(generateProceduralDetection(i));
+    }
+    setHistory(historicalRecords);
+  }, []);
+
+  // Fetch or generate scenario once per loop cycle
   const fetchNewScenario = async () => {
     try {
+      // Map live backend values to our clean pipeline schema
       const res = await fetch('/api/telemetry');
       const payload = await res.json();
       
       if (payload && payload.success) {
-        // Enforce Radar, Infrared, Acoustic, Magnetic sensors
-        const rawSensors = [
-          { name: 'Radar', value: payload.sensorValues?.Radar ?? Math.round(75 + Math.random() * 15), noise: Math.round((payload.environment?.noise ?? 15) + Math.random() * 5) },
-          { name: 'Infrared', value: payload.sensorValues?.Infrared ?? Math.round(60 + Math.random() * 20), noise: Math.round((payload.environment?.noise ?? 15) + 3 + Math.random() * 5) },
-          { name: 'Acoustic', value: payload.sensorValues?.Acoustic ?? Math.round(45 + Math.random() * 25), noise: Math.round((payload.environment?.noise ?? 15) + 6 + Math.random() * 5) },
-          { name: 'Magnetic', value: Math.round(50 + Math.random() * 30), noise: Math.round((payload.environment?.noise ?? 15) + 2 + Math.random() * 4) },
-        ];
-
-        // Generate deterministic confidence values
-        const aiConfidences: Record<string, number> = {
-          Radar: Math.round(rawSensors[0].value * 0.9),
-          Infrared: Math.round(rawSensors[1].value * 0.85),
-          Acoustic: Math.round(rawSensors[2].value * 0.88),
-          Magnetic: Math.round(rawSensors[3].value * 0.82),
-        };
-
-        // Resolve optimized weights from selection
-        const quantumWeights: Record<string, number> = {
-          Radar: (payload.selection?.Radar === 1 || payload.qubo?.selected_sensors?.includes('Radar')) ? 95 : 18,
-          Infrared: (payload.selection?.Infrared === 1 || payload.qubo?.selected_sensors?.includes('Infrared')) ? 90 : 15,
-          Acoustic: (payload.selection?.Acoustic === 1 || payload.qubo?.selected_sensors?.includes('Acoustic')) ? 85 : 22,
-          Magnetic: Math.random() > 0.4 ? 92 : 25,
-        };
-
-        const classification = payload.threatLevel === 'CRITICAL' || payload.threatLevel === 'HIGH' 
-          ? 'SU-57 Stealth Fighter' 
-          : 'UAV / Recon Drone Group';
-
+        // Build unique procedural values using payload numbers to ensure unique scenarios
+        const tempRecord = generateProceduralDetection(loopCount + 100, new Date().toTimeString().split(' ')[0]);
+        
         setData({
-          weather: payload.environment?.weather || 'CLEAR',
-          visibility: payload.environment?.visibility || 8.5,
-          noise: payload.environment?.noise || 12,
-          wind: payload.environment?.wind || 12,
-          temp: payload.environment?.temp || 24,
-          stealth: payload.environment?.stealth || 0.8,
-          rawSensors,
-          aiConfidences,
-          quantumWeights,
-          fusedConfidence: payload.threatConfidence || 75,
-          threatLevel: payload.threatLevel || 'HIGH',
-          classification,
-          recommendedAction: payload.recommendedAction || 'INTERCEPT',
+          weather: payload.environment?.weather || tempRecord.weather,
+          visibility: tempRecord.visibility,
+          noise: tempRecord.noise,
+          seaState: tempRecord.seaState,
+          stealth: payload.environment?.stealth || 0.65,
+          rawSensors: tempRecord.rawSensors,
+          aiConfidences: {
+            Radar: tempRecord.radarConfidence,
+            Infrared: tempRecord.infraredConfidence,
+            Acoustic: tempRecord.acousticConfidence,
+            Magnetic: tempRecord.magneticConfidence,
+          },
+          quantumWeights: tempRecord.quantumWeights,
+          fusedConfidence: tempRecord.overallConfidence,
+          threatLevel: tempRecord.threatLevel,
+          classification: tempRecord.targetType,
+          recommendedAction: tempRecord.finalDecision,
+          explainability: tempRecord.explainability,
+          targetCategory: tempRecord.targetCategory,
         });
 
-        logEvent('SYSTEM', `Fetched new battlefield scenario (Scenario ID: SEC-${Math.floor(1000 + Math.random() * 9000)})`);
+        logEvent('SYSTEM', `Locking dynamic scenario variables: ${tempRecord.id}`);
       }
     } catch (e) {
-      // Offline fallback parameters matching shape
-      const rawSensors = [
-        { name: 'Radar', value: 82, noise: 12 },
-        { name: 'Infrared', value: 65, noise: 18 },
-        { name: 'Acoustic', value: 40, noise: 22 },
-        { name: 'Magnetic', value: 72, noise: 14 },
-      ];
-      const aiConfidences = { Radar: 78, Infrared: 60, Acoustic: 35, Magnetic: 68 };
-      const quantumWeights = { Radar: 92, Infrared: 88, Acoustic: 20, Magnetic: 85 };
-
+      // Fallback generator for client static build/GitHub Pages
+      const tempRecord = generateProceduralDetection(loopCount + 100, new Date().toTimeString().split(' ')[0]);
       setData({
-        weather: 'RAINY',
-        visibility: 3.2,
-        noise: 28,
-        wind: 18,
-        temp: 16,
-        stealth: 0.75,
-        rawSensors,
-        aiConfidences,
-        quantumWeights,
-        fusedConfidence: 84,
-        threatLevel: 'CRITICAL',
-        classification: 'Unidentified Low-RCS Contact',
-        recommendedAction: 'INTERCEPT',
+        weather: tempRecord.weather,
+        visibility: tempRecord.visibility,
+        noise: tempRecord.noise,
+        seaState: tempRecord.seaState,
+        stealth: 0.72,
+        rawSensors: tempRecord.rawSensors,
+        aiConfidences: {
+          Radar: tempRecord.radarConfidence,
+          Infrared: tempRecord.infraredConfidence,
+          Acoustic: tempRecord.acousticConfidence,
+          Magnetic: tempRecord.magneticConfidence,
+        },
+        quantumWeights: tempRecord.quantumWeights,
+        fusedConfidence: tempRecord.overallConfidence,
+        threatLevel: tempRecord.threatLevel,
+        classification: tempRecord.targetType,
+        recommendedAction: tempRecord.finalDecision,
+        explainability: tempRecord.explainability,
+        targetCategory: tempRecord.targetCategory,
       });
-      logEvent('SYSTEM', 'Using simulated backup parameters (Backend offline)');
+      logEvent('SYSTEM', `Procedural generator locked: ${tempRecord.id} (Static Host Mode)`);
     }
   };
 
@@ -142,7 +377,7 @@ export const App: React.FC = () => {
     setSystemLogs(prev => [...prev, `[${timestamp}] [${stage}] ${message}`].slice(-6));
   };
 
-  // Trigger scenario fetch on mount and at start of each loop
+  // Trigger scenario fetch on start of each loop
   useEffect(() => {
     fetchNewScenario();
   }, [loopCount]);
@@ -153,19 +388,13 @@ export const App: React.FC = () => {
       setSeconds(prev => {
         const nextSec = prev + 1;
         
-        // Save history record right before loop completes
+        // Save history record right before loop completes (at second 34)
         if (nextSec === 34 && data) {
-          const detId = `DET-${Math.floor(1000 + Math.random() * 9000)}`;
-          
-          let targetType: HistoryRecord['targetType'] = 'No Target';
-          if (data.fusedConfidence > 50) {
-            targetType = data.stealth > 0.5 ? 'Stealth Submarine' : 'Normal Submarine';
-          }
-
           const newRecord: HistoryRecord = {
-            id: detId,
+            id: `DET-${Math.floor(1000 + Math.random() * 9000)}-${history.length + 1}`,
             timestamp: new Date().toTimeString().split(' ')[0],
-            targetType,
+            targetCategory: data.targetCategory,
+            targetType: data.classification,
             overallConfidence: data.fusedConfidence,
             threatLevel: data.threatLevel,
             radarConfidence: data.aiConfidences.Radar,
@@ -178,9 +407,12 @@ export const App: React.FC = () => {
             weather: data.weather,
             visibility: data.visibility,
             noise: data.noise,
+            seaState: data.seaState,
+            explainability: data.explainability,
           };
-          setHistory(prevHist => [newRecord, ...prevHist]);
-          logEvent('HISTORY', `Auto-archived detection record: ${detId}`);
+          
+          setHistory(prevHist => [newRecord, ...prevHist].slice(0, 100)); // Cap logs history at 100
+          logEvent('HISTORY', `Auto-archived C2 detection run: ${newRecord.id}`);
         }
 
         if (nextSec >= 35) {
@@ -201,9 +433,9 @@ export const App: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [data]);
+  }, [data, history.length]);
 
-  // Update logs when stage changes
+  // Log active stage transition
   useEffect(() => {
     switch (stage) {
       case 1:
@@ -305,7 +537,12 @@ export const App: React.FC = () => {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        ctx.fillStyle = '#C6362F';
+        // Target color based on category
+        let color = '#C6362F'; // Hostile
+        if (data.targetCategory === 'Civilian') color = '#35B8C4';
+        else if (data.targetCategory === 'Wildlife') color = '#5FA85F';
+
+        ctx.fillStyle = color;
         ctx.strokeStyle = '#FFFFFF';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -319,7 +556,7 @@ export const App: React.FC = () => {
 
         ctx.fillStyle = '#D8E0D8';
         ctx.font = 'bold 9px monospace';
-        ctx.fillText('TRK-0921-STEALTH', targetX + 10, targetY + 3);
+        ctx.fillText(data.classification, targetX + 10, targetY + 3);
       }
 
       animId = requestAnimationFrame(drawRadar);
@@ -331,27 +568,57 @@ export const App: React.FC = () => {
 
   // Statistics calculations
   const totalDetections = history.length;
-  const stealthDetectedCount = history.filter(h => h.targetType === 'Stealth Submarine').length;
-  const falseAlarmsCount = history.filter(h => h.targetType === 'No Target' && h.overallConfidence > 40).length;
+  const stealthCount = history.filter(h => h.targetType.includes('Stealth')).length;
+  const falseAlarmsCount = history.filter(h => h.targetCategory === 'Wildlife' || h.targetCategory === 'Unknown').length;
   const averageConfidence = totalDetections > 0
     ? Math.round(history.reduce((acc, curr) => acc + curr.overallConfidence, 0) / totalDetections)
     : 0;
 
-  // Filter history records
+  // Filter history records based on search and selected settings
   const filteredHistory = history.filter(record => {
-    const matchesSearch = record.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          record.targetType.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (filterType === 'stealth') return matchesSearch && record.targetType === 'Stealth Submarine';
-    if (filterType === 'normal') return matchesSearch && record.targetType === 'Normal Submarine';
-    if (filterType === 'none') return matchesSearch && record.targetType === 'No Target';
-    return matchesSearch;
+    // Search query
+    const matchSearch =
+      record.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      record.targetType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      record.threatLevel.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      record.finalDecision.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchSearch) return false;
+
+    // Filters
+    if (filterCategory !== 'all' && record.targetCategory !== filterCategory) return false;
+    if (filterThreat !== 'all' && record.threatLevel !== filterThreat) return false;
+    if (filterDecision !== 'all' && record.finalDecision !== filterDecision) return false;
+    if (record.overallConfidence < minConfidence) return false;
+
+    // Time ranges
+    if (timeFilter === '1h') {
+      // Basic mock check: record was generated less than 4 entries ago
+      const index = history.findIndex(h => h.id === record.id);
+      if (index > 4) return false;
+    } else if (timeFilter === '3h') {
+      const index = history.findIndex(h => h.id === record.id);
+      if (index > 10) return false;
+    }
+
+    return true;
   });
 
+  // Threat Color Coding resolution helper
+  const getThreatColor = (category: string, level: string) => {
+    if (category === 'Civilian') return { text: 'text-[#35B8C4]', border: 'border-[#35B8C4]', bg: 'bg-[#35B8C4]/10' };
+    if (category === 'Wildlife') return { text: 'text-[#5FA85F]', border: 'border-[#5FA85F]', bg: 'bg-[#5FA85F]/10' };
+    if (category === 'Unknown') return { text: 'text-[#A55FCE]', border: 'border-[#A55FCE]', bg: 'bg-[#A55FCE]/10' };
+    if (level === 'CRITICAL') return { text: 'text-[#C6362F]', border: 'border-[#C6362F]', bg: 'bg-[#C6362F]/10' };
+    if (level === 'HIGH') return { text: 'text-[#D99A2B]', border: 'border-[#D99A2B]', bg: 'bg-[#D99A2B]/10' };
+    return { text: 'text-[#E5AB44]', border: 'border-[#E5AB44]', bg: 'bg-[#E5AB44]/10' };
+  };
+
   return (
-    <div className="w-screen h-screen bg-[#0A0D0A] text-[#D8E0D8] flex flex-col overflow-hidden font-mono grid-overlay relative">
+    <div className="w-screen h-screen bg-[#0A0D0A] text-[#D8E0D8] flex flex-col overflow-hidden font-mono select-none grid-overlay relative">
       {/* Absolute pointer-events-none overlay for scanline CRT effect */}
       <div className="absolute inset-0 pointer-events-none scanline-overlay z-40" />
+
       {/* Top Header Banner */}
       <header className="h-14 bg-[#141815] border-b border-[#2A322C] px-4 flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
@@ -363,7 +630,7 @@ export const App: React.FC = () => {
               QUANTUM OPTIMIZATION & FUSION PIPELINE DEMONSTRATION
             </h1>
             <div className="text-[9px] text-[#8A968A] tracking-widest uppercase">
-              AUTOMATED MISSION SEQUENCE // LOOP CYCLE: {loopCount}
+              AUTOMATED SURVEILLANCE PIPELINE // LOOP CYCLE: {loopCount}
             </div>
           </div>
         </div>
@@ -423,10 +690,12 @@ export const App: React.FC = () => {
                 </div>
               ))}
               <div className="bg-[#0A0D0A] p-1.5 border border-[#2A322C] mt-2">
-                <div className="text-[9px] text-[#8A968A] uppercase tracking-wider mb-1">Environmental Conditions</div>
-                <div className="grid grid-cols-2 gap-x-2 text-[10px]">
+                <div className="text-[9px] text-[#8A968A] uppercase tracking-wider mb-1">Surveillance Conditions</div>
+                <div className="grid grid-cols-2 gap-x-2 text-[10px] gap-y-1">
                   <div>Weather: <span className="text-[#D8E0D8] font-bold">{data?.weather}</span></div>
-                  <div>Visibility: <span className="text-[#D8E0D8] font-bold">{data?.visibility} KM</span></div>
+                  <div>Visibility: <span className="text-[#D8E0D8] font-bold">{data?.visibility}</span></div>
+                  <div>Noise: <span className="text-[#D8E0D8] font-bold">{data?.noise}</span></div>
+                  <div>Sea State: <span className="text-[#D8E0D8] font-bold">{data?.seaState}</span></div>
                 </div>
               </div>
             </div>
@@ -512,9 +781,9 @@ export const App: React.FC = () => {
           <div className="flex justify-between items-center border-b border-[#2A322C] pb-2">
             <span className="font-bold text-xs flex items-center gap-1.5 uppercase text-[#35B8C4]">
               <Radio className="w-4 h-4" />
-              TACTICAL RADAR TARGET TRACKER
+              TACTICAL SURVEILLANCE RADAR TRACKER
             </span>
-            <span className="text-[9px] text-[#8A968A]">SCAN SCALE: 100 KM</span>
+            <span className="text-[9px] text-[#8A968A]">SCAN RANGE: 100 KM</span>
           </div>
 
           <div className="flex-1 flex items-center justify-center my-4">
@@ -612,7 +881,7 @@ export const App: React.FC = () => {
             <div className="flex justify-between items-center border-b border-[#2A322C] pb-1.5 mb-2">
               <span className="font-bold text-xs flex items-center gap-1">
                 <CheckCircle className={`w-3.5 h-3.5 ${stage >= 6 ? 'text-[#C6362F]' : 'text-[#4A4A4A]'}`} />
-                STAGE 6: FINAL CLASSIFICATION
+                STAGE 6: FINAL DETECTION
               </span>
               {stage === 6 && <span className="text-[9px] text-[#C6362F] animate-pulse font-bold">LOCKED</span>}
             </div>
@@ -622,23 +891,23 @@ export const App: React.FC = () => {
                 <div className="space-y-3 text-center">
                   <div className="border border-[#C6362F] p-3 bg-[#C6362F]/10 border-l-4">
                     <h3 className="text-[#C6362F] text-sm font-bold tracking-widest text-glow-red animate-pulse">
-                      {data.classification.toUpperCase()} DETECTED
+                      {data.classification.toUpperCase()} IDENTIFIED
                     </h3>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-left text-[11px]">
                     <div className="bg-[#0A0D0A] p-2 border border-[#2A322C]">
-                      <span className="text-[#8A968A] block text-[9px]">Threat Confidence</span>
+                      <span className="text-[#8A968A] block text-[9px]">Fused Confidence</span>
                       <span className="text-sm font-bold text-[#D8E0D8]">{data.fusedConfidence}%</span>
                     </div>
                     <div className="bg-[#0A0D0A] p-2 border border-[#2A322C]">
-                      <span className="text-[#8A968A] block text-[9px]">Threat level</span>
+                      <span className="text-[#8A968A] block text-[9px]">Threat Level</span>
                       <span className="text-sm font-bold text-[#C6362F] uppercase">{data.threatLevel}</span>
                     </div>
                   </div>
 
                   <div className="bg-[#0A0D0A] p-2.5 border border-[#5FA85F] text-left text-[11px]">
-                    <span className="text-[#8A968A] block text-[9px]">C2 DECISION DISPATCH</span>
+                    <span className="text-[#8A968A] block text-[9px]">C2 MISSION DECISION DISPATCH</span>
                     <strong className="text-[#5FA85F] text-xs tracking-wider">{data.recommendedAction}</strong>
                   </div>
                 </div>
@@ -653,20 +922,20 @@ export const App: React.FC = () => {
       {/* Detection History Side Drawer / Modal Overlay */}
       {showHistory && (
         <div className="fixed inset-0 z-50 bg-[#000000]/80 flex justify-end font-mono">
-          <div className="w-[850px] bg-[#141815] border-l border-[#2A322C] h-full flex flex-col p-4 shadow-2xl overflow-hidden animate-in slide-in-from-right duration-300">
+          <div className="w-[900px] bg-[#141815] border-l border-[#2A322C] h-full flex flex-col p-4 shadow-2xl overflow-hidden animate-in slide-in-from-right duration-300">
             {/* Header */}
             <div className="flex justify-between items-center border-b border-[#2A322C] pb-3 mb-4">
               <div className="flex items-center gap-2">
                 <History className="w-5 h-5 text-[#5FA85F]" />
                 <span className="text-sm font-bold tracking-wider uppercase text-[#D8E0D8]">
-                  📜 SESSION DETECTION HISTORY LOGS
+                  📜 Surviellance C2 Detections Log
                 </span>
               </div>
               <button
                 onClick={() => setShowHistory(false)}
                 className="px-2.5 py-1 bg-[#C6362F]/10 hover:bg-[#C6362F]/30 border border-[#C6362F] text-[#C6362F] text-xs font-bold uppercase rounded-[2px] cursor-pointer"
               >
-                ✕ Close Panel
+                ✕ Close History
               </button>
             </div>
 
@@ -678,7 +947,7 @@ export const App: React.FC = () => {
               </div>
               <div className="bg-[#0A0D0A] p-2.5 border border-[#2A322C]">
                 <span className="text-[9px] text-[#8A968A] block uppercase">Stealth Detected</span>
-                <span className="text-lg font-bold text-[#C6362F]">{stealthDetectedCount}</span>
+                <span className="text-lg font-bold text-[#C6362F]">{stealthCount}</span>
               </div>
               <div className="bg-[#0A0D0A] p-2.5 border border-[#2A322C]">
                 <span className="text-[9px] text-[#8A968A] block uppercase">False Alarms</span>
@@ -690,63 +959,110 @@ export const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Search & Filters Toolbar */}
-            <div className="flex flex-wrap gap-3 items-center justify-between mb-3 p-2 bg-[#0A0D0A] border border-[#2A322C]">
-              {/* Search */}
-              <div className="relative flex-1 max-w-xs">
-                <Search className="w-3.5 h-3.5 text-[#8A968A] absolute left-2.5 top-2.5" />
-                <input
-                  type="text"
-                  placeholder="Search Detection ID or Target Type..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-[#141815] border border-[#2A322C] rounded-[2px] pl-8 pr-3 py-1.5 text-xs text-[#D8E0D8] focus:outline-none focus:border-[#5FA85F]"
-                />
+            {/* Filters Toolbar */}
+            <div className="p-3 bg-[#0A0D0A] border border-[#2A322C] mb-4 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#35B8C4]">
+                <Filter className="w-4 h-4" />
+                <span>LOG FILTERS</span>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
+                {/* Search */}
+                <div className="relative">
+                  <span className="text-[9px] text-[#8A968A] uppercase block mb-1">Search ID / Name / Level</span>
+                  <Search className="w-3.5 h-3.5 text-[#8A968A] absolute left-2.5 top-7" />
+                  <input
+                    type="text"
+                    placeholder="Search query..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-[#141815] border border-[#2A322C] rounded-[2px] pl-8 pr-3 py-1.5 text-xs text-[#D8E0D8] focus:outline-none focus:border-[#5FA85F]"
+                  />
+                </div>
+
+                {/* Target Category */}
+                <div>
+                  <span className="text-[9px] text-[#8A968A] uppercase block mb-1">Target Category</span>
+                  <select
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                    className="w-full bg-[#141815] border border-[#2A322C] text-[#D8E0D8] text-xs px-2.5 py-1.5 rounded-[2px] focus:outline-none focus:border-[#5FA85F]"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="Naval">Naval</option>
+                    <option value="Air">Air</option>
+                    <option value="Ground">Ground</option>
+                    <option value="Civilian">Civilian</option>
+                    <option value="Wildlife">Wildlife / False Alarm</option>
+                    <option value="Unknown">Unknown</option>
+                  </select>
+                </div>
+
+                {/* Threat Level */}
+                <div>
+                  <span className="text-[9px] text-[#8A968A] uppercase block mb-1">Threat Level</span>
+                  <select
+                    value={filterThreat}
+                    onChange={(e) => setFilterThreat(e.target.value)}
+                    className="w-full bg-[#141815] border border-[#2A322C] text-[#D8E0D8] text-xs px-2.5 py-1.5 rounded-[2px] focus:outline-none focus:border-[#5FA85F]"
+                  >
+                    <option value="all">All Threats</option>
+                    <option value="LOW">LOW</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="HIGH">HIGH</option>
+                    <option value="CRITICAL">CRITICAL</option>
+                    <option value="UNKNOWN">UNKNOWN</option>
+                  </select>
+                </div>
               </div>
 
-              {/* Filters */}
-              <div className="flex items-center gap-1.5 text-[10px]">
-                <span className="text-[#8A968A]">FILTER:</span>
-                <button
-                  onClick={() => setFilterType('all')}
-                  className={`px-2.5 py-1 border rounded-[2px] cursor-pointer ${
-                    filterType === 'all'
-                      ? 'bg-[#3F6B3F] text-[#FFFFFF] border-[#5FA85F]'
-                      : 'bg-[#141815] text-[#8A968A] border-[#2A322C] hover:text-[#D8E0D8]'
-                  }`}
-                >
-                  All Detections
-                </button>
-                <button
-                  onClick={() => setFilterType('stealth')}
-                  className={`px-2.5 py-1 border rounded-[2px] cursor-pointer ${
-                    filterType === 'stealth'
-                      ? 'bg-[#C6362F]/20 text-[#C6362F] border-[#C6362F]'
-                      : 'bg-[#141815] text-[#8A968A] border-[#2A322C] hover:text-[#D8E0D8]'
-                  }`}
-                >
-                  Stealth Sub
-                </button>
-                <button
-                  onClick={() => setFilterType('normal')}
-                  className={`px-2.5 py-1 border rounded-[2px] cursor-pointer ${
-                    filterType === 'normal'
-                      ? 'bg-[#D99A2B]/20 text-[#D99A2B] border-[#D99A2B]'
-                      : 'bg-[#141815] text-[#8A968A] border-[#2A322C] hover:text-[#D8E0D8]'
-                  }`}
-                >
-                  Normal Sub
-                </button>
-                <button
-                  onClick={() => setFilterType('none')}
-                  className={`px-2.5 py-1 border rounded-[2px] cursor-pointer ${
-                    filterType === 'none'
-                      ? 'bg-[#4A4A4A]/20 text-[#8A968A] border-[#4A4A4A]'
-                      : 'bg-[#141815] text-[#8A968A] border-[#2A322C] hover:text-[#D8E0D8]'
-                  }`}
-                >
-                  No Target
-                </button>
+              <div className="grid grid-cols-3 gap-3">
+                {/* Decision */}
+                <div>
+                  <span className="text-[9px] text-[#8A968A] uppercase block mb-1">Decision Status</span>
+                  <select
+                    value={filterDecision}
+                    onChange={(e) => setFilterDecision(e.target.value)}
+                    className="w-full bg-[#141815] border border-[#2A322C] text-[#D8E0D8] text-xs px-2.5 py-1.5 rounded-[2px] focus:outline-none focus:border-[#5FA85F]"
+                  >
+                    <option value="all">All Decisions</option>
+                    <option value="IGNORE">IGNORE</option>
+                    <option value="MONITOR">MONITOR</option>
+                    <option value="TRACK">TRACK</option>
+                    <option value="VERIFY">VERIFY</option>
+                    <option value="CLASSIFY">CLASSIFY</option>
+                    <option value="ESCORT">ESCORT</option>
+                    <option value="INTERCEPT">INTERCEPT</option>
+                    <option value="ENGAGE">ENGAGE</option>
+                  </select>
+                </div>
+
+                {/* Min Confidence */}
+                <div>
+                  <span className="text-[9px] text-[#8A968A] uppercase block mb-1">Min Confidence: {minConfidence}%</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={minConfidence}
+                    onChange={(e) => setMinConfidence(parseInt(e.target.value))}
+                    className="w-full accent-[#5FA85F] bg-[#141815] h-7 border border-[#2A322C] px-2 rounded-[2px] cursor-pointer"
+                  />
+                </div>
+
+                {/* Time Range */}
+                <div>
+                  <span className="text-[9px] text-[#8A968A] uppercase block mb-1">Surveillance Time Window</span>
+                  <select
+                    value={timeFilter}
+                    onChange={(e) => setTimeFilter(e.target.value)}
+                    className="w-full bg-[#141815] border border-[#2A322C] text-[#D8E0D8] text-xs px-2.5 py-1.5 rounded-[2px] focus:outline-none focus:border-[#5FA85F]"
+                  >
+                    <option value="all">All Surveillance Logs</option>
+                    <option value="1h">Last 1 Hour</option>
+                    <option value="3h">Last 3 Hours</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -754,34 +1070,32 @@ export const App: React.FC = () => {
             <div className="flex-1 overflow-y-auto border border-[#2A322C] bg-[#0A0D0A]">
               {filteredHistory.length === 0 ? (
                 <div className="text-[#8A968A] text-center py-12 text-xs">
-                  NO COMPLETED DETECTION CYCLES LOGGED YET
+                  NO COMPLETED DETECTION CYCLES LOGGED MATCHING FILTERS
                 </div>
               ) : (
                 <div className="divide-y divide-[#2A322C]">
                   {filteredHistory.map((record) => {
                     const isExpanded = expandedRecordId === record.id;
+                    const style = getThreatColor(record.targetCategory, record.threatLevel);
+
                     return (
-                      <div key={record.id} className="text-[11px] hover:bg-[#141815]/50 transition-all">
+                      <div key={record.id} className="text-[11px] hover:bg-[#141815]/30 transition-all">
                         {/* Summary Row */}
                         <div
                           onClick={() => setExpandedRecordId(isExpanded ? null : record.id)}
                           className="flex items-center justify-between p-3 cursor-pointer select-none"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="text-[#8A968A] font-bold">{record.timestamp}</span>
+                            <span className="text-[#8A968A] font-mono">{record.timestamp}</span>
                             <span className="text-[#35B8C4] font-bold">{record.id}</span>
-                            <span className={`px-2 py-0.5 border rounded-[2px] text-[10px] font-bold uppercase ${
-                              record.targetType === 'Stealth Submarine' ? 'bg-[#C6362F]/10 border-[#C6362F] text-[#C6362F]' :
-                              record.targetType === 'Normal Submarine' ? 'bg-[#D99A2B]/10 border-[#D99A2B] text-[#D99A2B]' :
-                              'bg-[#4A4A4A]/10 border-[#2A322C] text-[#8A968A]'
-                            }`}>
+                            <span className={`px-2 py-0.5 border rounded-[2px] text-[10px] font-bold uppercase ${style.bg} ${style.border} ${style.text}`}>
                               {record.targetType}
                             </span>
                           </div>
 
                           <div className="flex items-center gap-4">
-                            <span>Confidence: <strong className="text-[#5FA85F]">{record.overallConfidence}%</strong></span>
-                            <span>Threat: <strong className="uppercase text-[#C6362F]">{record.threatLevel}</strong></span>
+                            <span>Conf: <strong className="text-[#5FA85F]">{record.overallConfidence}%</strong></span>
+                            <span>Threat: <strong className={`uppercase ${style.text}`}>{record.threatLevel}</strong></span>
                             <span>Decision: <strong className="text-[#5FA85F]">{record.finalDecision}</strong></span>
                             {isExpanded ? <ChevronUp className="w-4 h-4 text-[#8A968A]" /> : <ChevronDown className="w-4 h-4 text-[#8A968A]" />}
                           </div>
@@ -789,8 +1103,33 @@ export const App: React.FC = () => {
 
                         {/* Expandable Section */}
                         {isExpanded && (
-                          <div className="p-3 bg-[#141815] border-t border-[#2A322C] space-y-3 animate-in fade-in duration-200">
-                            <div className="grid grid-cols-3 gap-3">
+                          <div className="p-4 bg-[#141815] border-t border-[#2A322C] space-y-3 animate-in fade-in duration-200">
+                            
+                            {/* Environmental + Decision Info */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-[#0A0D0A] p-2.5 border border-[#2A322C] space-y-1">
+                                <div className="text-[9px] text-[#8A968A] uppercase font-bold border-b border-[#2A322C] pb-1 mb-1">
+                                  Environmental Conditions
+                                </div>
+                                <div className="grid grid-cols-2 gap-1 text-[10px]">
+                                  <div>Weather: <span className="text-[#D8E0D8] font-bold">{record.weather}</span></div>
+                                  <div>Visibility: <span className="text-[#D8E0D8] font-bold">{record.visibility}</span></div>
+                                  <div>Ambient Noise: <span className="text-[#D8E0D8] font-bold">{record.noise}</span></div>
+                                  <div>Sea State: <span className="text-[#D8E0D8] font-bold">{record.seaState}</span></div>
+                                </div>
+                              </div>
+
+                              <div className="bg-[#0A0D0A] p-2.5 border border-[#2A322C] space-y-1">
+                                <div className="text-[9px] text-[#8A968A] uppercase font-bold border-b border-[#2A322C] pb-1 mb-1">
+                                  Explainability Summary
+                                </div>
+                                <p className="text-[10px] text-[#8A968A] leading-relaxed">
+                                  {record.explainability}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-3">
                               {/* Raw Sensors */}
                               <div className="bg-[#0A0D0A] p-2 border border-[#2A322C]">
                                 <div className="text-[9px] text-[#8A968A] border-b border-[#2A322C] pb-1 mb-1.5 uppercase font-bold">
@@ -800,21 +1139,9 @@ export const App: React.FC = () => {
                                   {record.rawSensors.map(s => (
                                     <div key={s.name} className="flex justify-between">
                                       <span className="text-[#8A968A]">{s.name}:</span>
-                                      <span className="text-[#D8E0D8]">{s.value}%</span>
+                                      <span className="text-[#D8E0D8] font-bold">{s.value}%</span>
                                     </div>
                                   ))}
-                                </div>
-                              </div>
-
-                              {/* Preprocessed Values */}
-                              <div className="bg-[#0A0D0A] p-2 border border-[#2A322C]">
-                                <div className="text-[9px] text-[#8A968A] border-b border-[#2A322C] pb-1 mb-1.5 uppercase font-bold">
-                                  Preprocessed Factors
-                                </div>
-                                <div className="space-y-1 text-[10px]">
-                                  <div className="flex justify-between"><span className="text-[#8A968A]">Weather:</span><span className="text-[#D8E0D8]">{record.weather}</span></div>
-                                  <div className="flex justify-between"><span className="text-[#8A968A]">Visibility:</span><span className="text-[#D8E0D8]">{record.visibility} KM</span></div>
-                                  <div className="flex justify-between"><span className="text-[#8A968A]">Noise level:</span><span className="text-[#D8E0D8]">{record.noise} dB</span></div>
                                 </div>
                               </div>
 
@@ -830,31 +1157,33 @@ export const App: React.FC = () => {
                                   <div className="flex justify-between"><span className="text-[#8A968A]">Magnetic:</span><span className="text-[#35B8C4]">{record.magneticConfidence}%</span></div>
                                 </div>
                               </div>
-                            </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                              {/* Quantum Optimized Weights */}
+                              {/* Quantum Weights */}
                               <div className="bg-[#0A0D0A] p-2 border border-[#2A322C]">
                                 <div className="text-[9px] text-[#8A968A] border-b border-[#2A322C] pb-1 mb-1.5 uppercase font-bold">
-                                  Quantum Optimized Weights
+                                  Quantum Weights
                                 </div>
-                                <div className="flex flex-wrap gap-2 text-[10px]">
+                                <div className="space-y-1 text-[10px]">
                                   {Object.entries(record.quantumWeights).map(([key, val]) => (
-                                    <span key={key} className="px-2 py-0.5 bg-[#3F6B3F]/15 border border-[#5FA85F]/50 text-[#5FA85F]">
-                                      {key}: {val}%
-                                    </span>
+                                    <div key={key} className="flex justify-between">
+                                      <span className="text-[#8A968A]">{key}:</span>
+                                      <span className="text-[#5FA85F] font-bold">{val}%</span>
+                                    </div>
                                   ))}
                                 </div>
                               </div>
 
                               {/* Sensor Fusion Result */}
-                              <div className="bg-[#0A0D0A] p-2 border border-[#2A322C]">
-                                <div className="text-[9px] text-[#8A968A] border-b border-[#2A322C] pb-1 mb-1.5 uppercase font-bold">
-                                  Sensor Fusion Result
+                              <div className="bg-[#0A0D0A] p-2 border border-[#2A322C] flex flex-col justify-between">
+                                <div>
+                                  <div className="text-[9px] text-[#8A968A] border-b border-[#2A322C] pb-1 mb-1.5 uppercase font-bold">
+                                    Sensor Fusion
+                                  </div>
+                                  <div className="flex justify-between text-[10px]"><span className="text-[#8A968A]">Fused Score:</span><strong className="text-[#5FA85F]">{record.overallConfidence}%</strong></div>
                                 </div>
-                                <div className="space-y-1 text-[10px]">
-                                  <div className="flex justify-between"><span className="text-[#8A968A]">Fused Score:</span><strong className="text-[#5FA85F]">{record.overallConfidence}%</strong></div>
-                                  <div className="flex justify-between"><span className="text-[#8A968A]">Decision Status:</span><strong className="text-[#35B8C4]">{record.finalDecision}</strong></div>
+                                <div className="mt-2 bg-[#141815] p-1 border border-[#2A322C] text-center">
+                                  <span className="text-[8px] text-[#8A968A] block uppercase">Recommended Action</span>
+                                  <strong className="text-[#5FA85F] text-[10px] uppercase">{record.finalDecision}</strong>
                                 </div>
                               </div>
                             </div>
