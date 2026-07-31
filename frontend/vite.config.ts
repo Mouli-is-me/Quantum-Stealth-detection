@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  base: '/Quantum-Stealth-detection/', // <-- Add this line
+  base: '/Quantum-Stealth-detection/',
 
   plugins: [react()],
 
@@ -14,7 +14,7 @@ export default defineConfig({
   },
 
   build: {
-    outDir: '../src/ui',
+    outDir: '../docs',
     emptyOutDir: true,
   },
 
