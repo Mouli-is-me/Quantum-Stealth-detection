@@ -1,6 +1,6 @@
 from typing import Dict, Any, List
 
-def classical_sensor_fusion(scores: Dict[str, float], threshold: float = 0.6) -> Dict[str, Any]:
+def classical_sensor_fusion(scores: Dict[str, float], threshold: float = 0.45) -> Dict[str, Any]:
     """
     Classical weighted sensor fusion baseline.
     Supports legacy sensors with original weights, generalizes to any number of sensors,
@@ -8,7 +8,7 @@ def classical_sensor_fusion(scores: Dict[str, float], threshold: float = 0.6) ->
     
     Args:
         scores: Dictionary of sensor confidence scores.
-        threshold: Detection threshold. Default 0.6.
+        threshold: Detection threshold. Default 0.45.
         
     Returns:
         Dict[str, Any]: Structured baseline results.

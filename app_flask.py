@@ -36,17 +36,19 @@ def get_telemetry():
         # 1. Generate Battlefield Environment
         environment = generate_environment()
 
-        # 2. Calculate Sensor Scores (Radar, Infrared, Acoustic)
-        scores = calculate_sensor_scores(environment)
+        # 2. Calculate Sensor Scores
+        raw_scores = calculate_sensor_scores(environment)
         
-        # Add Thermal sensor score (simulated or derived)
-        # to match the frontend spectral readings
-        scores["Thermal"] = round(min(0.99, environment["engine_heat"] * 1.1), 2)
+        # Extract only the numeric sensor scores
+        sensor_keys = ["Radar", "Infrared", "Acoustic", "Thermal", "EO_Camera"]
+        scores = {k: float(v) for k, v in raw_scores.items() if k in sensor_keys}
+        metadata = {k: v for k, v in raw_scores.items() if k not in sensor_keys}
 
         # 3. Merge data for AI predictor
         sensor_data = {
             **environment,
-            **scores
+            **scores,
+            **metadata
         }
 
         # 4. Predict target presence & AI confidence
@@ -80,7 +82,7 @@ def get_telemetry():
             "selection": {
                 "Radar": 1 if quantum_result["selection"].get("Radar") else 0,
                 "Infrared": 1 if quantum_result["selection"].get("Infrared") else 0,
-                "Thermal": 1 if scores["Thermal"] > 0.55 else 0, # Optimization threshold
+                "Thermal": 1 if quantum_result["selection"].get("Thermal") else 0,
                 "Acoustic": 1 if quantum_result["selection"].get("Acoustic") else 0
             },
             "threatConfidence": int(confidence * 100),

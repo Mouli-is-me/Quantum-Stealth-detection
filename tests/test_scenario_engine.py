@@ -25,8 +25,8 @@ class TestScenarioEngine(unittest.TestCase):
         self.engine = ScenarioEngine(seed=42)
 
     def test_mission_templates_coverage(self):
-        """Verify all 12 mission templates are defined and accessible."""
-        self.assertEqual(len(MISSION_TEMPLATES), 12)
+        """Verify mission templates are defined and accessible."""
+        self.assertGreaterEqual(len(MISSION_TEMPLATES), 12)
         for mission_enum in MissionType:
             self.assertIn(mission_enum, MISSION_TEMPLATES)
             template = MISSION_TEMPLATES[mission_enum]

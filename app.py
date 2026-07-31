@@ -30,11 +30,17 @@ if st.button("Generate New Scenario"):
 
         st.write("📡 Calculating multi-sensor confidence scores...")
         time.sleep(0.5)
-        scores = calculate_sensor_scores(environment)
+        raw_scores = calculate_sensor_scores(environment)
+        
+        # Extract only the numeric sensor scores to prevent downstream crashes
+        sensor_keys = ["Radar", "Infrared", "Acoustic", "Thermal", "EO_Camera"]
+        scores = {k: float(v) for k, v in raw_scores.items() if k in sensor_keys}
+        metadata = {k: v for k, v in raw_scores.items() if k not in sensor_keys}
 
         sensor_data = {
             **environment,
-            **scores
+            **scores,
+            **metadata
         }
 
         st.write("🤖 Running classical AI prediction model...")

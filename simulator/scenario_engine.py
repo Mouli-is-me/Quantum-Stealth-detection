@@ -226,22 +226,36 @@ class ScenarioEngine:
     ) -> str:
 
         score = 0.0
-        score += profile.stealth_rating_range[1] * 3.0
+        score += profile.stealth_rating_range[1] * 3.5
         score += (env.distance_km / 100.0) * 2.0
-        score += jamming * 3.0
-        if env.weather in [Weather.HEAVY_RAIN, Weather.FOG]:
-            score += 2.0
+        score += jamming * 3.5
+        if env.weather in [Weather.HEAVY_RAIN, Weather.DENSE_FOG, Weather.THUNDERSTORM, Weather.HEAVY_SNOW, Weather.SANDSTORM]:
+            score += 2.5
+        elif env.weather in [Weather.LIGHT_RAIN, Weather.MORNING_FOG, Weather.SNOW, Weather.HAZE]:
+            score += 1.2
         if target_count > 1:
-            score += 1.5
+            score += target_count * 0.8
 
-        if score < 3.0:
+        if score < 1.5:
+            return "Very Easy"
+        elif score < 3.0:
             return "Easy"
+        elif score < 4.2:
+            return "Normal"
         elif score < 5.5:
-            return "Medium"
-        elif score < 8.0:
+            return "Moderate"
+        elif score < 6.8:
             return "Hard"
-        else:
+        elif score < 8.0:
+            return "Very Hard"
+        elif score < 9.2:
             return "Extreme"
+        elif score < 10.5:
+            return "Combat"
+        elif score < 12.0:
+            return "Hostile"
+        else:
+            return "Maximum Threat"
 
     def _calculate_ground_truth(
         self,

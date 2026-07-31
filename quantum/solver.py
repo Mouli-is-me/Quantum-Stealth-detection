@@ -36,12 +36,15 @@ def solve_qubo(qp: QuadraticProgram, sensor_scores: Dict[str, float]) -> Dict[st
         if enabled
     ]
     
+    # Clean sensor scores to numeric values
+    clean_scores = {k: float(v) for k, v in sensor_scores.items() if isinstance(v, (int, float))}
+
     # 3. Calculate adaptive fusion weights
-    weights = calculate_fusion_weights(sensor_scores, selected_sensors)
+    weights = calculate_fusion_weights(clean_scores, selected_sensors)
     
     # 4. Calculate overall fused confidence (weighted average)
     if selected_sensors:
-        fusion_score = sum(weights[s] * sensor_scores[s] for s in selected_sensors)
+        fusion_score = sum(weights[s] * clean_scores[s] for s in selected_sensors)
     else:
         fusion_score = 0.0
         
@@ -61,10 +64,10 @@ def solve_qubo(qp: QuadraticProgram, sensor_scores: Dict[str, float]) -> Dict[st
     }
     
     # 7. Generate Dynamic Explanation
-    explanation = generate_explanation(sensor_scores, selected_sensors, weights)
+    explanation = generate_explanation(clean_scores, selected_sensors, weights)
     
     # 8. Return structured dict with legacy fields and new rich fields
-    return {
+    res = {
         # Legacy fields for backward compatibility
         "selection": selection,
         "selected_count": len(selected_sensors),
@@ -80,3 +83,10 @@ def solve_qubo(qp: QuadraticProgram, sensor_scores: Dict[str, float]) -> Dict[st
         "bitstring": bitstring,
         "reason": explanation
     }
+
+    # Top-level selection flags for direct key access compatibility
+    for sensor_name, is_selected in selection.items():
+        if sensor_name not in res:
+            res[sensor_name] = is_selected
+
+    return res

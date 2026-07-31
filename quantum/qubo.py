@@ -30,15 +30,15 @@ def build_qubo(*args, **kwargs) -> QuadraticProgram:
     # Determine the scores dict from args/kwargs
     scores: Dict[str, float] = {}
     if len(args) == 1 and isinstance(args[0], dict):
-        scores = args[0]
+        scores = {k: float(v) for k, v in args[0].items() if isinstance(v, (int, float))}
     elif len(args) == 3:
         scores = {
-            "Radar": args[0],
-            "Infrared": args[1],
-            "Acoustic": args[2]
+            "Radar": float(args[0]),
+            "Infrared": float(args[1]),
+            "Acoustic": float(args[2])
         }
     elif "scores" in kwargs:
-        scores = kwargs["scores"]
+        scores = {k: float(v) for k, v in kwargs["scores"].items() if isinstance(v, (int, float))}
     else:
         # Check standard names
         for key in ["Radar", "Infrared", "Acoustic"]:

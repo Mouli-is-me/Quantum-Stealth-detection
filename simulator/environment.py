@@ -9,14 +9,34 @@ from typing import Dict, Any
 
 
 class Weather(Enum):
+    # Extended 20 Weather Types
+    CLEAR_SKY = "Clear Sky"
+    PARTLY_CLOUDY = "Partly Cloudy"
+    CLOUDY = "Cloudy"
+    LIGHT_RAIN = "Light Rain"
+    HEAVY_RAIN = "Heavy Rain"
+    DRIZZLE = "Drizzle"
+    THUNDERSTORM = "Thunderstorm"
+    MORNING_FOG = "Morning Fog"
+    DENSE_FOG = "Dense Fog"
+    NIGHT_FOG = "Night Fog"
+    SNOW = "Snow"
+    HEAVY_SNOW = "Heavy Snow"
+    SANDSTORM = "Sandstorm"
+    DUST_STORM = "Dust Storm"
+    SMOKE = "Smoke"
+    HAZE = "Haze"
+    CROSS_WIND = "Cross Wind"
+    STRONG_WIND = "Strong Wind"
+    HUMID = "Humid"
+    LOW_VISIBILITY = "Low Visibility"
+
+    # Backward Compatibility Aliases
     CLEAR = "Clear"
     CLEAR_DAY = "Clear Day"
-    CLOUDY = "Cloudy"
     RAIN = "Rain"
-    HEAVY_RAIN = "Heavy Rain"
     FOG = "Fog"
     NIGHT = "Night"
-    SNOW = "Snow"
     DESERT_HEAT = "Desert Heat"
     MOUNTAIN_REGION = "Mountain Region"
     ELECTRONIC_JAMMING = "Electronic Jamming"
@@ -53,7 +73,7 @@ HEALTH_MULTIPLIERS: Dict[SensorHealth, tuple] = {
 @dataclass
 class EnvironmentConfig:
     distance_km: float = 25.0
-    weather: Weather = Weather.CLEAR
+    weather: Weather = Weather.CLEAR_SKY
     ambient_temp_c: float = 15.0
     humidity_pct: float = 50.0
     visibility_km: float = 20.0
@@ -70,19 +90,21 @@ class EnvironmentConfig:
 
     def get_rf_attenuation_db_per_km(self) -> float:
         """Returns X/Ku band radar atmospheric attenuation in dB/km."""
-        if self.weather in [Weather.CLEAR, Weather.CLEAR_DAY, Weather.NIGHT, Weather.DESERT_HEAT]:
+        if self.weather in [Weather.CLEAR, Weather.CLEAR_SKY, Weather.CLEAR_DAY, Weather.NIGHT, Weather.DESERT_HEAT, Weather.HUMID, Weather.HAZE]:
             return 0.02
-        elif self.weather == Weather.CLOUDY:
+        elif self.weather in [Weather.PARTLY_CLOUDY, Weather.CLOUDY]:
             return 0.05
-        elif self.weather == Weather.RAIN:
+        elif self.weather in [Weather.DRIZZLE, Weather.LIGHT_RAIN, Weather.RAIN]:
             return 0.45
-        elif self.weather == Weather.HEAVY_RAIN:
-            return 0.85    # Heavy rain severe RF attenuation
-        elif self.weather == Weather.FOG:
-            return 0.15
-        elif self.weather == Weather.SNOW:
-            return 0.30
-        elif self.weather == Weather.MOUNTAIN_REGION:
+        elif self.weather in [Weather.HEAVY_RAIN, Weather.THUNDERSTORM]:
+            return 0.95    # Heavy rain / thunderstorm severe RF attenuation
+        elif self.weather in [Weather.MORNING_FOG, Weather.FOG, Weather.DENSE_FOG, Weather.NIGHT_FOG]:
+            return 0.18
+        elif self.weather in [Weather.SNOW, Weather.HEAVY_SNOW]:
+            return 0.40
+        elif self.weather in [Weather.SANDSTORM, Weather.DUST_STORM, Weather.SMOKE]:
+            return 0.35
+        elif self.weather in [Weather.CROSS_WIND, Weather.STRONG_WIND, Weather.LOW_VISIBILITY, Weather.MOUNTAIN_REGION]:
             return 0.08
         elif self.weather == Weather.ELECTRONIC_JAMMING:
             return 0.10
@@ -91,48 +113,57 @@ class EnvironmentConfig:
     def get_ir_extinction_coef(self) -> float:
         """Returns atmospheric IR extinction coefficient per km."""
         base_humidity_loss = (self.humidity_pct / 100.0) * 0.015
-        if self.weather in [Weather.CLEAR, Weather.CLEAR_DAY, Weather.NIGHT]:
+        if self.weather in [Weather.CLEAR, Weather.CLEAR_SKY, Weather.CLEAR_DAY, Weather.NIGHT]:
             return 0.01 + base_humidity_loss
         elif self.weather == Weather.DESERT_HEAT:
-            return 0.025 + base_humidity_loss  # Thermal shimmer / convection loss
-        elif self.weather == Weather.CLOUDY:
-            return 0.03 + base_humidity_loss
-        elif self.weather == Weather.RAIN:
+            return 0.025 + base_humidity_loss
+        elif self.weather in [Weather.PARTLY_CLOUDY, Weather.CLOUDY, Weather.HAZE]:
+            return 0.035 + base_humidity_loss
+        elif self.weather in [Weather.DRIZZLE, Weather.LIGHT_RAIN, Weather.RAIN]:
             return 0.08 + base_humidity_loss
-        elif self.weather == Weather.HEAVY_RAIN:
-            return 0.15 + base_humidity_loss
-        elif self.weather == Weather.FOG:
-            return 0.22 + base_humidity_loss  # Dense fog scatters MWIR/LWIR strongly
-        elif self.weather == Weather.SNOW:
-            return 0.12 + base_humidity_loss
-        elif self.weather == Weather.MOUNTAIN_REGION:
-            return 0.015 + base_humidity_loss
-        return 0.01
+        elif self.weather in [Weather.HEAVY_RAIN, Weather.THUNDERSTORM]:
+            return 0.16 + base_humidity_loss
+        elif self.weather in [Weather.MORNING_FOG, Weather.FOG, Weather.DENSE_FOG, Weather.NIGHT_FOG]:
+            return 0.25 + base_humidity_loss  # Fog scatters MWIR/LWIR strongly
+        elif self.weather in [Weather.SNOW, Weather.HEAVY_SNOW]:
+            return 0.14 + base_humidity_loss
+        elif self.weather in [Weather.SANDSTORM, Weather.DUST_STORM, Weather.SMOKE]:
+            return 0.30 + base_humidity_loss  # Particulates scatter IR
+        elif self.weather in [Weather.HUMID, Weather.LOW_VISIBILITY]:
+            return 0.07 + base_humidity_loss
+        return 0.02
 
     def get_acoustic_absorption_db_per_km(self) -> float:
         """Returns acoustic absorption loss at ~1kHz in dB/km."""
         temp_factor = 1.0 + abs(self.ambient_temp_c - 15.0) * 0.02
         humidity_factor = max(0.5, 1.5 - (self.humidity_pct / 100.0))
-        return 5.0 * temp_factor * humidity_factor
+        wind_factor = 1.5 if self.weather in [Weather.CROSS_WIND, Weather.STRONG_WIND, Weather.THUNDERSTORM] else 1.0
+        return 5.0 * temp_factor * humidity_factor * wind_factor
 
     def get_optical_visibility_km(self) -> float:
         """Returns effective optical visibility range in km."""
-        if self.weather in [Weather.CLEAR, Weather.CLEAR_DAY]:
+        if self.weather in [Weather.CLEAR, Weather.CLEAR_SKY, Weather.CLEAR_DAY]:
             return min(self.visibility_km, 30.0)
         elif self.weather == Weather.DESERT_HEAT:
             return min(self.visibility_km, 25.0)
-        elif self.weather == Weather.CLOUDY:
-            return min(self.visibility_km, 15.0)
-        elif self.weather == Weather.NIGHT:
-            return min(self.visibility_km, 5.0)
-        elif self.weather == Weather.RAIN:
-            return min(self.visibility_km, 8.0)
-        elif self.weather == Weather.HEAVY_RAIN:
-            return min(self.visibility_km, 3.0)
-        elif self.weather == Weather.FOG:
-            return min(self.visibility_km, 1.2)
-        elif self.weather == Weather.SNOW:
+        elif self.weather in [Weather.PARTLY_CLOUDY, Weather.HUMID, Weather.HAZE]:
+            return min(self.visibility_km, 18.0)
+        elif self.weather in [Weather.CLOUDY, Weather.CROSS_WIND, Weather.STRONG_WIND]:
+            return min(self.visibility_km, 14.0)
+        elif self.weather in [Weather.NIGHT, Weather.NIGHT_FOG]:
             return min(self.visibility_km, 4.0)
+        elif self.weather in [Weather.DRIZZLE, Weather.LIGHT_RAIN, Weather.RAIN]:
+            return min(self.visibility_km, 8.0)
+        elif self.weather in [Weather.HEAVY_RAIN, Weather.THUNDERSTORM]:
+            return min(self.visibility_km, 2.5)
+        elif self.weather == Weather.MORNING_FOG:
+            return min(self.visibility_km, 2.0)
+        elif self.weather in [Weather.FOG, Weather.DENSE_FOG, Weather.LOW_VISIBILITY]:
+            return min(self.visibility_km, 1.0)
+        elif self.weather in [Weather.SNOW, Weather.HEAVY_SNOW]:
+            return min(self.visibility_km, 3.0)
+        elif self.weather in [Weather.SANDSTORM, Weather.DUST_STORM, Weather.SMOKE]:
+            return min(self.visibility_km, 1.5)
         elif self.weather == Weather.MOUNTAIN_REGION:
             return min(self.visibility_km, 18.0)
         return self.visibility_km
@@ -143,10 +174,23 @@ def parse_weather(weather_val: Any) -> Weather:
     if isinstance(weather_val, Weather):
         return weather_val
     if isinstance(weather_val, str):
+        # Direct match check
         for w in Weather:
             if w.value.lower() == weather_val.lower() or w.name.lower() == weather_val.lower():
                 return w
-    return Weather.CLEAR
+        # Fallback partial matching
+        val_lower = weather_val.lower()
+        if "clear" in val_lower:
+            return Weather.CLEAR_SKY
+        elif "rain" in val_lower or "drizzle" in val_lower:
+            return Weather.HEAVY_RAIN if "heavy" in val_lower else Weather.LIGHT_RAIN
+        elif "fog" in val_lower:
+            return Weather.DENSE_FOG if "dense" in val_lower else Weather.MORNING_FOG
+        elif "snow" in val_lower:
+            return Weather.SNOW
+        elif "storm" in val_lower:
+            return Weather.THUNDERSTORM
+    return Weather.CLEAR_SKY
 
 
 def parse_sensor_health(health_val: Any) -> SensorHealth:

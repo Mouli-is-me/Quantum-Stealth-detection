@@ -58,7 +58,7 @@ def predict_explainable(
     }
 
     # 3. Binary Detection Flag: 0 for Bird/No Target, 1 for Target Detected
-    if predicted_class == "Bird" or proba < 0.3:
+    if predicted_class == "Bird" or proba < 0.45:
         binary_pred = 0
     else:
         binary_pred = 1
